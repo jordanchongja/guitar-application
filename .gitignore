@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+guitar_app.db
+.streamlit/secrets.toml
