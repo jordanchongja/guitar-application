@@ -42,39 +42,39 @@ def draw_staff_svg(letter: str, octave: int, width: int = 220, height: int = 170
     if slot is None:
         raise ValueError(f"No staff position defined for {letter}{octave}")
 
-    lines_svg = []
-    for line_slot in (0, 2, 4, 6, 8):
-        y = _slot_y(line_slot)
-        lines_svg.append(f'<line x1="40" y1="{y}" x2="{width - 20}" y2="{y}" stroke="currentColor" stroke-width="1.5" />')
-
     note_x = width / 2 + 10
     note_y = _slot_y(slot)
+    stem_up = slot < 4
+    stem_y2 = note_y - 34 if stem_up else note_y + 34
+    stem_x = note_x + 8 if stem_up else note_x - 8
 
-    ledger_svg = ""
+    # Build every child element as one list entry, then join with no
+    # separator at all. A blank (whitespace-only) line inside a raw-HTML
+    # block ends that block early under CommonMark's HTML-block rule --
+    # Streamlit's markdown renderer follows it -- so anything after a blank
+    # line (like a not-always-present ledger line) silently drops out of the
+    # <svg> and never reaches the DOM. Keeping the whole body on one line
+    # sidesteps that entirely; see notation.py history for the repro.
+    parts = [
+        f'<line x1="40" y1="{_slot_y(s)}" x2="{width - 20}" y2="{_slot_y(s)}" stroke="currentColor" stroke-width="1.5" />'
+        for s in (0, 2, 4, 6, 8)
+    ]
+    parts.append(f'<text x="8" y="{_slot_y(4) + 16}" font-size="46" font-family="serif">&#119070;</text>')
     if slot <= -2 or slot >= 10:
         # Only C4 (slot -2) needs a ledger line in this note range.
-        ledger_svg = (
+        parts.append(
             f'<line x1="{note_x - 14}" y1="{note_y}" x2="{note_x + 14}" y2="{note_y}" '
             f'stroke="currentColor" stroke-width="1.5" />'
         )
+    parts.append(f'<ellipse cx="{note_x}" cy="{note_y}" rx="8" ry="6" fill="currentColor" />')
+    parts.append(f'<line x1="{stem_x}" y1="{note_y}" x2="{stem_x}" y2="{stem_y2}" stroke="currentColor" stroke-width="1.5" />')
 
-    stem_up = slot < 4
-    if stem_up:
-        stem_svg = f'<line x1="{note_x + 8}" y1="{note_y}" x2="{note_x + 8}" y2="{note_y - 34}" stroke="currentColor" stroke-width="1.5" />'
-    else:
-        stem_svg = f'<line x1="{note_x - 8}" y1="{note_y}" x2="{note_x - 8}" y2="{note_y + 34}" stroke="currentColor" stroke-width="1.5" />'
-
-    svg = f"""
-<svg viewBox="0 0 {width} {height}" width="{width}" height="{height}" xmlns="http://www.w3.org/2000/svg"
-     style="color:#2b2118; background:#fff8ec; border-radius:8px;">
-  {''.join(lines_svg)}
-  <text x="8" y="{_slot_y(4) + 16}" font-size="46" font-family="serif">&#119070;</text>
-  {ledger_svg}
-  <ellipse cx="{note_x}" cy="{note_y}" rx="8" ry="6" fill="currentColor" />
-  {stem_svg}
-</svg>
-"""
-    return svg
+    body = "".join(parts)
+    return (
+        f'<svg viewBox="0 0 {width} {height}" width="{width}" height="{height}" '
+        f'xmlns="http://www.w3.org/2000/svg" style="color:#2b2118;background:#fff8ec;border-radius:8px;">'
+        f"{body}</svg>"
+    )
 
 
 def natural_note_choices() -> list[tuple[str, int]]:

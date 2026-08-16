@@ -25,8 +25,9 @@ st.write(
     "calculate what chord it is."
 )
 st.caption(
-    "Click a dot to select just that note. Click-and-drag (box or lasso select) to grab "
-    "several dots at once and build a full voicing."
+    "Click a dot to select just that note. To select several dots at once and build a "
+    "full voicing, use the **Box Select** or **Lasso Select** tool in the chart's toolbar "
+    "(top-right of the chart) and drag over the dots you want."
 )
 
 frets_to_show = st.slider("Frets to show", min_value=5, max_value=settings["num_frets"], value=12)
@@ -44,7 +45,17 @@ event = st.plotly_chart(
     on_select="rerun",
     key=chart_key,
     selection_mode=("points", "box", "lasso"),
-    config={"displayModeBar": False},
+    # This is the one chart in the app where the mode bar earns its keep:
+    # box/lasso select is the only way to grab several notes at once, and
+    # without a visible toolbar there's no way to reach it. Trim it down to
+    # just the selection + reset tools so it doesn't invite zoom/pan, which
+    # would fight with the click-to-select interaction the rest of the page
+    # relies on.
+    config={
+        "displayModeBar": True,
+        "displaylogo": False,
+        "modeBarButtonsToRemove": ["zoom2d", "pan2d", "zoomIn2d", "zoomOut2d", "autoScale2d"],
+    },
 )
 
 points = event["selection"]["points"] if event and "selection" in event else []

@@ -188,7 +188,11 @@ def draw_fretboard(
         visible=False,
     )
     fig.update_layout(
-        title=title,
+        # Streamlit renders fig.layout.title.text as a visible caption above
+        # the chart. Passing `title=None` leaves that .text lookup undefined
+        # on the frontend, which prints literally as "undefined" -- so we
+        # always pass a string, empty when there's no title to show.
+        title=title or "",
         height=90 + num_strings * 45,
         margin=dict(l=10, r=10, t=40 if title else 20, b=10),
         plot_bgcolor="white",
