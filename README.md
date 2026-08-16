@@ -10,17 +10,26 @@ progress dashboard backed by SQLite. Built following the phased plan in
 ```
 main.py                        # Home page + shared skeleton / global settings
 modules/
-  theory.py                    # Notes, scales, diatonic chords, progressions, intervals
-  fretboard.py                 # Reusable Plotly fretboard renderer
+  theory.py                    # Notes, scales, chords, progressions, arpeggios, circle of fifths,
+                                #   chord identification, practice/daily-challenge generators
+  fretboard.py                 # Reusable Plotly fretboard renderer (static + clickable)
   audio.py                     # Dynamic sine-wave tone generation for ear training
+  notation.py                  # Minimal treble-clef staff renderer (inline SVG)
   database.py                  # SQLite persistence (practice logs, quiz scores)
   settings.py                  # Shared sidebar controls (Left-Handed Mode, Tuning)
 pages/
-  1_Scale_Reference.py         # Task 1
-  2_Fretboard_Tester.py        # Task 2
-  3_Chord_Progressions.py      # Task 3
-  4_Ear_Training.py            # Task 4
-  5_Progress_Dashboard.py      # Task 5
+  1_Scale_Reference.py         # Phase 1 - key/scale/CAGED-position browser
+  2_Fretboard_Tester.py        # Phase 2 - note-finding quiz
+  3_Chord_Progressions.py      # Phase 3 - diatonic chords + progression generator
+  4_Ear_Training.py            # Phase 4 - interval ear training
+  5_Progress_Dashboard.py      # Phase 2 - practice log + quiz score history
+  6_Chord_Dictionary.py        # Phase 2 - click frets, app names the chord
+  7_Circle_of_Fifths.py        # Phase 3 - interactive circle of fifths
+  8_Arpeggio_Visualizer.py     # Phase 3 - Maj/min/7th arpeggio shapes on the neck
+  9_Practice_Generator.py      # Phase 3 - randomized timed practice routine
+  10_Sight_Reading_Trainer.py  # Extra - staff note -> fretboard position quiz
+  11_Daily_Challenge.py        # Extra - "Riff of the Day", seeded per date
+  12_Custom_Tuning_Builder.py  # Extra - build a tuning string-by-string
 requirements.txt
 .streamlit/config.toml         # App theme
 ```
@@ -57,6 +66,15 @@ first run in the project root.
 
 ## Roadmap
 
-See [claude_prompts_and_plan.md](claude_prompts_and_plan.md) for the full
-phase breakdown and future ideas (Arpeggio Visualizer, Sight-Reading Trainer,
-Daily Challenge, Custom Tuning Builder, etc.).
+See [claude_prompts_and_plan.md](claude_prompts_and_plan.md) for the original
+phase breakdown. All phases (1-4) and every "Additional Feature Suggestion"
+from that plan are now implemented, including the Arpeggio Visualizer,
+Sight-Reading Trainer, Daily Challenge, and Custom Tuning Builder.
+
+## Notes on the Sight-Reading Trainer
+
+Staff notation is scoped to natural notes (no accidentals) across C4-F5, one
+octave plus a bit -- enough for first-position reading practice. The staff
+always displays a canonical octave for a given note letter; the multiple-choice
+fretboard positions test the pitch *class* (any octave), not the exact
+notated pitch, to keep the quiz well-defined. See `modules/notation.py`.

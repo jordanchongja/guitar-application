@@ -197,6 +197,52 @@ def draw_fretboard(
     return fig
 
 
+def draw_clickable_fretboard(
+    tuning: list[str],
+    num_frets: int = 15,
+    selected: set | None = None,
+    left_handed: bool = False,
+) -> go.Figure:
+    """
+    A fretboard where every string/fret intersection is a selectable point,
+    used by the Chord Dictionary page. Pass the returned figure to
+    `st.plotly_chart(fig, on_select="rerun")` and read clicked points back
+    from `event.selection.points[i]["customdata"]` -> (string_number, fret).
+    """
+    selected = selected or set()
+    num_strings = len(tuning)
+    base_fig = draw_fretboard(tuning, num_frets=num_frets, left_handed=left_handed, show_note_names=False)
+
+    grid_x, grid_y, grid_color, grid_size, grid_custom, grid_hover = [], [], [], [], [], []
+    for i, open_note in enumerate(tuning):
+        string_number = num_strings - i
+        y = i + 1
+        for fret in range(0, num_frets + 1):
+            x = fret if fret == 0 else fret - 0.5
+            note_name = note_at_fret(open_note, fret)
+            is_selected = (string_number, fret) in selected
+            grid_x.append(x)
+            grid_y.append(y)
+            grid_color.append(ROOT_COLOR if is_selected else "rgba(69,123,157,0.25)")
+            grid_size.append(24 if is_selected else 14)
+            grid_custom.append((string_number, fret))
+            grid_hover.append(f"String {string_number}, Fret {fret}: {note_name}")
+
+    base_fig.add_trace(
+        go.Scatter(
+            x=grid_x,
+            y=grid_y,
+            mode="markers",
+            marker=dict(size=grid_size, color=grid_color, line=dict(width=1, color="white")),
+            customdata=grid_custom,
+            hovertext=grid_hover,
+            hoverinfo="text",
+            showlegend=False,
+        )
+    )
+    return base_fig
+
+
 def build_scale_highlights(tuning: list[str], num_frets: int, scale_notes: list[str], root_note: str,
                             frets_range: tuple[int, int] | None = None) -> dict:
     """Highlight every occurrence of `scale_notes` on the neck (root colored differently)."""

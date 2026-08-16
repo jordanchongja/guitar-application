@@ -9,6 +9,8 @@ common progressions, and interval names for ear training.
 
 from __future__ import annotations
 
+import random
+
 # ---------------------------------------------------------------------------
 # Notes
 # ---------------------------------------------------------------------------
@@ -120,7 +122,17 @@ CHORD_INTERVALS = {
     "m7b5": [0, 3, 6, 10],
 }
 
-QUALITY_SUFFIX = {"maj": "", "min": "m", "dim": "dim", "aug": "aug"}
+QUALITY_SUFFIX = {
+    "maj": "",
+    "min": "m",
+    "dim": "dim",
+    "aug": "aug",
+    "maj7": "maj7",
+    "min7": "m7",
+    "dom7": "7",
+    "dim7": "dim7",
+    "m7b5": "m7b5",
+}
 
 
 def chord_notes(root: str, quality: str, prefer_flat: bool = False) -> list[str]:
@@ -227,3 +239,212 @@ def get_position_windows(root: str, tuning: list[str]) -> list[tuple[int, int]]:
         end = start + 4
         windows.append((start, end))
     return windows
+
+
+# ---------------------------------------------------------------------------
+# Arpeggios
+# ---------------------------------------------------------------------------
+
+ARPEGGIO_INTERVALS = {
+    "Major": [0, 4, 7],
+    "Minor": [0, 3, 7],
+    "Major 7": [0, 4, 7, 11],
+    "Minor 7": [0, 3, 7, 10],
+    "Dominant 7": [0, 4, 7, 10],
+    "Diminished 7": [0, 3, 6, 9],
+}
+
+
+def get_arpeggio_notes(root: str, arpeggio_type: str, prefer_flat: bool = False) -> list[str]:
+    return [transpose(root, i, prefer_flat=prefer_flat) for i in ARPEGGIO_INTERVALS[arpeggio_type]]
+
+
+# ---------------------------------------------------------------------------
+# Circle of Fifths
+# ---------------------------------------------------------------------------
+
+# 12 positions around the circle, starting at C (12 o'clock) and moving
+# clockwise in ascending fifths. `signature` is the count of sharps (+) or
+# flats (-) in that major key's key signature.
+CIRCLE_OF_FIFTHS = [
+    {"major": "C", "minor": "Am", "signature": 0},
+    {"major": "G", "minor": "Em", "signature": 1},
+    {"major": "D", "minor": "Bm", "signature": 2},
+    {"major": "A", "minor": "F#m", "signature": 3},
+    {"major": "E", "minor": "C#m", "signature": 4},
+    {"major": "B", "minor": "G#m", "signature": 5},
+    {"major": "F#", "minor": "D#m", "signature": 6},
+    {"major": "Db", "minor": "Bbm", "signature": -5},
+    {"major": "Ab", "minor": "Fm", "signature": -4},
+    {"major": "Eb", "minor": "Cm", "signature": -3},
+    {"major": "Bb", "minor": "Gm", "signature": -2},
+    {"major": "F", "minor": "Dm", "signature": -1},
+]
+
+
+def key_signature_label(signature: int) -> str:
+    if signature == 0:
+        return "No sharps or flats"
+    if signature > 0:
+        return f"{signature} sharp{'s' if signature != 1 else ''}"
+    return f"{-signature} flat{'s' if signature != -1 else ''}"
+
+
+# ---------------------------------------------------------------------------
+# Chord identification (reverse lookup, for the Chord Dictionary)
+# ---------------------------------------------------------------------------
+
+CHORD_QUALITY_LABELS = {
+    "maj": "Major",
+    "min": "Minor",
+    "dim": "Diminished",
+    "aug": "Augmented",
+    "maj7": "Major 7th",
+    "min7": "Minor 7th",
+    "dom7": "Dominant 7th",
+    "dim7": "Diminished 7th",
+    "m7b5": "Half-Diminished (m7b5)",
+}
+
+
+def identify_chord(note_names: set[str], prefer_flat: bool = False) -> list[dict]:
+    """
+    Given a set of note names (any octave/order, duplicates ignored), return
+    every root/quality combination whose interval formula produces exactly
+    that set of pitch classes. Empty list means no standard chord matches.
+    """
+    if len(note_names) < 2:
+        return []
+
+    given = {note_index(n) for n in note_names}
+    matches = []
+    for root_idx in range(12):
+        for quality, intervals in CHORD_INTERVALS.items():
+            expected = {(root_idx + i) % 12 for i in intervals}
+            if expected == given:
+                root_name = NOTES_FLAT[root_idx] if prefer_flat else NOTES_SHARP[root_idx]
+                matches.append(
+                    {
+                        "root": root_name,
+                        "quality": quality,
+                        "label": CHORD_QUALITY_LABELS[quality],
+                        "symbol": root_name + QUALITY_SUFFIX.get(quality, f"({quality})"),
+                    }
+                )
+    return matches
+
+
+# ---------------------------------------------------------------------------
+# Randomized Practice Generator
+# ---------------------------------------------------------------------------
+
+EXERCISE_LIBRARY = {
+    "Scales": [
+        "Play the Major scale in 2 different keys, ascending and descending.",
+        "Practice the Minor Pentatonic scale across all 5 neck positions.",
+        "Play the Natural Minor scale slowly with a metronome at 60bpm.",
+        "Improvise a short melodic phrase using only the Major Pentatonic scale.",
+    ],
+    "Chords": [
+        "Practice switching cleanly between open C, G, D, Em, and Am chords.",
+        "Play through the diatonic chords of a randomly chosen key.",
+        "Practice barre chords (E-shape and A-shape) moving up the neck.",
+        "Strum a I-V-vi-IV progression in a new key.",
+    ],
+    "Fretboard Knowledge": [
+        "Name every note on the low E string, low to high, without looking.",
+        "Find every occurrence of your favorite note across the whole neck in under 60 seconds.",
+        "Play the Fretboard Tester quiz and try to beat your best score.",
+        "Map out one octave shape starting from each string.",
+    ],
+    "Ear Training": [
+        "Practice identifying Major vs Minor 3rds by ear.",
+        "Sing the root note of a chord immediately after strumming it.",
+        "Play the Ear Training interval quiz for a few rounds.",
+        "Try to find a melody you know by ear, one phrase at a time.",
+    ],
+    "Technique": [
+        "Practice alternate picking on a chromatic exercise, slow and clean.",
+        "Work on legato (hammer-ons/pull-offs) on a single string.",
+        "Practice string-skipping exercises across 3 strings.",
+        "Play a simple riff cleanly at 3 different tempos.",
+    ],
+}
+
+
+def generate_practice_routine(total_minutes: int, categories: list[str] | None = None,
+                               rng: random.Random | None = None) -> list[dict]:
+    """Pick a handful of exercises from `categories` and allot minutes to fill `total_minutes`."""
+    rng = rng or random
+    categories = categories or list(EXERCISE_LIBRARY.keys())
+    categories = [c for c in categories if c in EXERCISE_LIBRARY] or list(EXERCISE_LIBRARY.keys())
+
+    pool = [(cat, ex) for cat in categories for ex in EXERCISE_LIBRARY[cat]]
+    rng.shuffle(pool)
+
+    num_items = max(2, min(6, total_minutes // 5)) if total_minutes >= 4 else 1
+    chosen = pool[:num_items] if len(pool) >= num_items else pool
+    if not chosen:
+        return []
+
+    base = total_minutes // len(chosen)
+    remainder = total_minutes - base * len(chosen)
+    routine = []
+    for i, (cat, ex) in enumerate(chosen):
+        minutes = base + (1 if i < remainder else 0)
+        routine.append({"category": cat, "exercise": ex, "minutes": max(minutes, 1)})
+    return routine
+
+
+# ---------------------------------------------------------------------------
+# Daily Challenge / "Riff of the Day"
+# ---------------------------------------------------------------------------
+
+def generate_challenge_from_seed(seed: str) -> dict:
+    """Build a challenge dict deterministically from any string seed."""
+    rng = random.Random(seed)
+    key = rng.choice(ALL_KEYS)
+    kind = rng.choice(["progression", "note_hunt", "scale_position", "interval", "arpeggio"])
+
+    if kind == "progression":
+        pattern_name = rng.choice(list(COMMON_PROGRESSIONS.keys()))
+        scale_type = rng.choice(["Major", "Natural Minor"])
+        chords = generate_progression(key, scale_type, pattern_name)
+        symbols = " - ".join(c["symbol"] for c in chords)
+        return {
+            "title": "Progression Practice",
+            "description": f"Play the **{pattern_name}** progression in **{key} {scale_type}**: {symbols}",
+        }
+    if kind == "note_hunt":
+        note = rng.choice(ALL_KEYS)
+        return {
+            "title": "Note Hunt",
+            "description": f"Find every **{note}** note on the fretboard in under 30 seconds.",
+        }
+    if kind == "scale_position":
+        scale_type = rng.choice(list(SCALE_INTERVALS.keys()))
+        position = rng.randint(1, 5)
+        return {
+            "title": "Position Practice",
+            "description": f"Play the **{key} {scale_type}** scale in Position {position} on the Scale Reference page.",
+        }
+    if kind == "interval":
+        interval_name = rng.choice(list(INTERVAL_NAMES.values()))
+        return {
+            "title": "Ear Training Focus",
+            "description": f"Score 5 correct **{interval_name}** identifications in a row on the Ear Training page.",
+        }
+    # arpeggio
+    arpeggio_type = rng.choice(list(ARPEGGIO_INTERVALS.keys()))
+    return {
+        "title": "Arpeggio Practice",
+        "description": f"Practice the **{key} {arpeggio_type}** arpeggio shape up and down the neck.",
+    }
+
+
+def generate_daily_challenge(date) -> dict:
+    """
+    Deterministic-per-day challenge: seeded on the ISO date string so every
+    visitor sees the same challenge on a given day, and it changes at midnight.
+    """
+    return generate_challenge_from_seed(date.isoformat())

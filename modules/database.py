@@ -106,3 +106,11 @@ def get_practice_summary() -> dict:
         cur = conn.execute("SELECT COUNT(DISTINCT date) FROM practice_logs")
         days_practiced = cur.fetchone()[0]
     return {"total_minutes": total_minutes, "days_practiced": days_practiced}
+
+
+# In a Streamlit multipage app, a user can land directly on any page (sidebar
+# nav, bookmark, refresh) without ever running main.py first. Running this
+# once at import time -- instead of relying on each page to call it -- means
+# the tables always exist no matter which page opens first. CREATE TABLE IF
+# NOT EXISTS makes this cheap and safe to repeat every time the module loads.
+init_db()

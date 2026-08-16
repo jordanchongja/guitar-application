@@ -24,17 +24,45 @@ settings = render_sidebar_settings()
 st.title("🎸 Guitar Learning App")
 st.markdown(
     """
-Welcome! Use the navigation in the sidebar to jump between tools:
-
-- **Scale Reference** — visualize Major/Minor/Pentatonic scales anywhere on the neck.
-- **Fretboard Tester** — a note-finding quiz to drill fretboard knowledge.
-- **Chord Progressions** — generate diatonic chords and common progressions for any key.
-- **Ear Training** — train your ear to recognize intervals.
-- **Progress Dashboard** — log practice time and review your quiz history.
+Welcome! Use the navigation in the sidebar to jump between tools, or the quick links below.
 
 Your **Left-Handed Mode** and **Tuning** choices in the sidebar apply across every page.
 """
 )
+
+st.subheader("Reference")
+ref_cols = st.columns(3)
+with ref_cols[0]:
+    st.page_link("pages/1_Scale_Reference.py", label="Scale Reference", icon="🎼")
+with ref_cols[1]:
+    st.page_link("pages/6_Chord_Dictionary.py", label="Chord Dictionary", icon="📖")
+with ref_cols[2]:
+    st.page_link("pages/7_Circle_of_Fifths.py", label="Circle of Fifths", icon="🎡")
+ref_cols2 = st.columns(3)
+with ref_cols2[0]:
+    st.page_link("pages/8_Arpeggio_Visualizer.py", label="Arpeggio Visualizer", icon="🎹")
+with ref_cols2[1]:
+    st.page_link("pages/3_Chord_Progressions.py", label="Chord Progressions", icon="🎶")
+with ref_cols2[2]:
+    st.page_link("pages/12_Custom_Tuning_Builder.py", label="Custom Tuning Builder", icon="🎛️")
+
+st.subheader("Practice & Quizzes")
+quiz_cols = st.columns(3)
+with quiz_cols[0]:
+    st.page_link("pages/2_Fretboard_Tester.py", label="Fretboard Tester", icon="🎯")
+with quiz_cols[1]:
+    st.page_link("pages/4_Ear_Training.py", label="Ear Training", icon="👂")
+with quiz_cols[2]:
+    st.page_link("pages/10_Sight_Reading_Trainer.py", label="Sight-Reading Trainer", icon="🎼")
+quiz_cols2 = st.columns(3)
+with quiz_cols2[0]:
+    st.page_link("pages/9_Practice_Generator.py", label="Practice Generator", icon="🗒️")
+with quiz_cols2[1]:
+    st.page_link("pages/11_Daily_Challenge.py", label="Daily Challenge", icon="🔥")
+with quiz_cols2[2]:
+    st.page_link("pages/5_Progress_Dashboard.py", label="Progress Dashboard", icon="📊")
+
+st.divider()
 
 st.subheader("Standard Tuning Fretboard")
 fig = draw_fretboard(
