@@ -22,7 +22,7 @@ import streamlit as st
 from modules.audio import generate_cadence_and_tone_wav, generate_scale_run_wav
 from modules.database import log_quiz_score
 from modules.settings import render_sidebar_settings
-from modules.theory import CHROMATIC_NUMBERS, CHROMATIC_SOLFEGE, FUNCTIONAL_EAR_LEVELS
+from modules.theory import CHROMATIC_NUMBERS, CHROMATIC_SOLFEGE, FUNCTIONAL_EAR_LEVELS, get_resolve_path
 
 st.set_page_config(page_title="Functional Ear Trainer", page_icon="🎯", layout="wide")
 render_sidebar_settings()
@@ -119,17 +119,17 @@ if st.session_state.fet_answered:
     else:
         st.error(f"Incorrect, that was **{correct_label}**.")
 
-    replay_col1, replay_col2, replay_col3, next_col = st.columns([1, 1, 1, 1])
+    replay_col1, replay_col2, next_col = st.columns([1, 1, 2])
     with replay_col1:
         if st.button("🔁 Replay"):
             st.rerun()
     with replay_col2:
-        if st.button("⬇️ Hear Resolve Down"):
-            run = generate_scale_run_wav(question["key_root"], list(range(question["target_offset"], -1, -1)))
-            st.session_state.fet_resolve_wav = run
-    with replay_col3:
-        if st.button("⬆️ Hear Resolve Up"):
-            run = generate_scale_run_wav(question["key_root"], list(range(question["target_offset"], 13)))
+        if st.button("🎯 Hear It Resolve to Do"):
+            # A stepwise line through the diatonic degrees between the
+            # target and the tonic -- e.g. Fa resolves down through Mi, Re
+            # to Do; So and everything above resolves up to Do an octave up.
+            path = get_resolve_path(question["target_offset"])
+            run = generate_scale_run_wav(question["key_root"], path, note_duration=0.4, gap=0.06)
             st.session_state.fet_resolve_wav = run
     with next_col:
         if st.button("Next Note ➜", type="primary"):

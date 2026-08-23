@@ -235,6 +235,27 @@ FUNCTIONAL_EAR_LEVELS = {
     "Chromatic (all 12)": list(range(12)),
 }
 
+_MAJOR_SCALE_OFFSETS = set(SCALE_INTERVALS["Major"])
+
+
+def get_resolve_path(target_offset: int) -> list[int]:
+    """
+    A stepwise line (semitone offsets from the key root) from a scale degree
+    back to the tonic, moving only through the *other diatonic* degrees in
+    between -- e.g. Fa resolves down through Mi and Re to Do; So and every
+    degree above it resolves up through the degrees above to Do an octave
+    up. A chromatic (non-diatonic) target still resolves through whichever
+    diatonic degrees lie between it and the tonic in that direction.
+    """
+    if target_offset < 7:
+        path = sorted((o for o in _MAJOR_SCALE_OFFSETS if o <= target_offset), reverse=True)
+    else:
+        path = sorted(o for o in _MAJOR_SCALE_OFFSETS if o >= target_offset) + [12]
+
+    if not path or path[0] != target_offset:
+        path = [target_offset] + path
+    return path
+
 
 # ---------------------------------------------------------------------------
 # CAGED-style neck positions (approximate)
