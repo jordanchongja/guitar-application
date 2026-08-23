@@ -51,15 +51,20 @@ quiz_cols = st.columns(3)
 with quiz_cols[0]:
     st.page_link("pages/2_Fretboard_Tester.py", label="Fretboard Tester", icon="🎯")
 with quiz_cols[1]:
-    st.page_link("pages/4_Ear_Training.py", label="Ear Training", icon="👂")
+    st.page_link("pages/4_Ear_Training.py", label="Ear Training (Intervals)", icon="👂")
 with quiz_cols[2]:
-    st.page_link("pages/10_Sight_Reading_Trainer.py", label="Sight-Reading Trainer", icon="🎼")
+    st.page_link("pages/13_Functional_Ear_Trainer.py", label="Functional Ear Trainer", icon="🎯")
 quiz_cols2 = st.columns(3)
 with quiz_cols2[0]:
-    st.page_link("pages/9_Practice_Generator.py", label="Practice Generator", icon="🗒️")
+    st.page_link("pages/10_Sight_Reading_Trainer.py", label="Sight-Reading Trainer", icon="🎼")
 with quiz_cols2[1]:
-    st.page_link("pages/11_Daily_Challenge.py", label="Daily Challenge", icon="🔥")
+    st.page_link("pages/9_Practice_Generator.py", label="Practice Generator", icon="🗒️")
 with quiz_cols2[2]:
+    st.page_link("pages/11_Daily_Challenge.py", label="Daily Challenge", icon="🔥")
+quiz_cols3 = st.columns(3)
+with quiz_cols3[0]:
+    st.page_link("pages/14_Metronome.py", label="Metronome", icon="🥁")
+with quiz_cols3[1]:
     st.page_link("pages/5_Progress_Dashboard.py", label="Progress Dashboard", icon="📊")
 
 st.divider()

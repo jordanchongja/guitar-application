@@ -216,6 +216,27 @@ INTERVAL_NAMES = {
 
 
 # ---------------------------------------------------------------------------
+# Functional Ear Trainer (Alain Benbassat method)
+# ---------------------------------------------------------------------------
+#
+# Unlike the interval trainer above (two notes -> name the gap between them),
+# this establishes a tonal center with a short cadence, then plays a single
+# note -- the listener identifies that note's *scale degree* (its function
+# within the key), not an interval distance. Movable-do solfege names the 12
+# chromatic scale degrees; "raised" syllables (di, ri, fi, si, li) cover the
+# passing tones between the 7 diatonic degrees.
+
+CHROMATIC_SOLFEGE = ["Do", "Di", "Re", "Ri", "Mi", "Fa", "Fi", "So", "Si", "La", "Li", "Ti"]
+CHROMATIC_NUMBERS = ["1", "#1", "2", "#2", "3", "4", "#4", "5", "#5", "6", "#6", "7"]
+
+FUNCTIONAL_EAR_LEVELS = {
+    "Simple (1, 3, 5)": [0, 4, 7],
+    "Diatonic (1-7)": [0, 2, 4, 5, 7, 9, 11],
+    "Chromatic (all 12)": list(range(12)),
+}
+
+
+# ---------------------------------------------------------------------------
 # CAGED-style neck positions (approximate)
 # ---------------------------------------------------------------------------
 #
@@ -242,6 +263,53 @@ def get_position_windows(root: str, tuning: list[str]) -> list[tuple[int, int]]:
 
 
 # ---------------------------------------------------------------------------
+# Three-Notes-Per-String scale shapes
+# ---------------------------------------------------------------------------
+#
+# Only well-defined for 7-note scales (Major / Natural Minor) -- a 5-note
+# pentatonic scale isn't conventionally played 3-per-string. Walks the low
+# string upward collecting 3 ascending scale-tone frets, then figures out
+# where to pick up the same run on the next string by computing that
+# string-pair's tuning interval directly from the note names (so it works
+# for any tuning, not just standard), rather than a hard-coded fret offset.
+
+def get_three_nps_pattern(key: str, scale_type: str, tuning: list[str],
+                           start_fret: int = 0, num_frets: int = 22) -> dict[tuple[int, int], str]:
+    if scale_type not in ("Major", "Natural Minor"):
+        raise ValueError("Three-notes-per-string patterns only apply to Major or Natural Minor scales")
+
+    scale_pitch_classes = {note_index(n) for n in get_scale_notes(key, scale_type)}
+    num_strings = len(tuning)
+    pattern: dict[tuple[int, int], str] = {}
+
+    search_from = max(0, start_fret)
+    for string_number in range(num_strings, 0, -1):  # low string (6) up to high string (1)
+        open_note = tuning[num_strings - string_number]
+        found = []
+        fret = search_from
+        while len(found) < 3 and fret <= num_frets:
+            if (note_index(open_note) + fret) % 12 in scale_pitch_classes:
+                found.append(fret)
+            fret += 1
+        if len(found) < 3:
+            break  # ran out of neck before completing this string's group
+
+        for f in found:
+            pattern[(string_number, f)] = note_at_fret(open_note, f)
+
+        if string_number > 1:
+            next_open = tuning[num_strings - (string_number - 1)]
+            # How many frets up *this* string reach the next string's open
+            # pitch -- i.e. how much lower that same pitch sits on the next
+            # (higher-pitched) string.
+            interval = (note_index(next_open) - note_index(open_note)) % 12
+            same_pitch_fret_on_next = found[-1] - interval
+            search_from = same_pitch_fret_on_next + 1
+
+    return pattern
+
+
+# ---------------------------------------------------------------------------
 # Arpeggios
 # ---------------------------------------------------------------------------
 
@@ -252,6 +320,18 @@ ARPEGGIO_INTERVALS = {
     "Minor 7": [0, 3, 7, 10],
     "Dominant 7": [0, 4, 7, 10],
     "Diminished 7": [0, 3, 6, 9],
+    # Extended chords (9/11/13), common in jazz/neo-soul/funk. These list the
+    # full stacked-thirds chord tones -- a 6-string guitar can't voice all of
+    # them uniquely at once, so real voicings use a subset. This page shows
+    # every occurrence of every chord tone across the neck (not one fixed
+    # voicing), which is exactly what's useful for outlining these chords
+    # while soloing, regardless of how you end up voicing them for comping.
+    "Major 9": [0, 4, 7, 11, 14],
+    "Minor 9": [0, 3, 7, 10, 14],
+    "Dominant 9": [0, 4, 7, 10, 14],
+    "Dominant 11": [0, 4, 7, 10, 14, 17],
+    "Minor 11": [0, 3, 7, 10, 14, 17],
+    "Dominant 13": [0, 4, 7, 10, 14, 17, 21],
 }
 
 
@@ -339,17 +419,31 @@ def identify_chord(note_names: set[str], prefer_flat: bool = False) -> list[dict
 # ---------------------------------------------------------------------------
 
 EXERCISE_LIBRARY = {
+    "Warm-Up": [
+        "Play a chromatic 1-2-3-4 exercise up and down each string, focusing on even timing and minimal finger movement.",
+        "Stretch your fretting hand, then play a slow scale run at half your normal tempo before anything technical.",
+        "Play open chords softly for 2 minutes, focusing purely on clean fretting and even string volume.",
+    ],
     "Scales": [
         "Play the Major scale in 2 different keys, ascending and descending.",
         "Practice the Minor Pentatonic scale across all 5 neck positions.",
         "Play the Natural Minor scale slowly with a metronome at 60bpm.",
         "Improvise a short melodic phrase using only the Major Pentatonic scale.",
+        "Play a scale across the ENTIRE neck in one key, low E to high E, without stopping -- rather than staying inside one box.",
+        "Try a Three-Notes-Per-String pattern on the Scale Reference page and shift it up the neck one position at a time (diagonal 'staircase' movement).",
+        "Constraint improvisation: improvise for 2 minutes using only 3 notes from the scale.",
+        "Constraint improvisation: improvise without repeating the same note twice within any 4-beat span.",
+        "Practice moving smoothly between two adjacent scale positions without pausing at the shift.",
     ],
-    "Chords": [
+    "Chords & Harmony": [
         "Practice switching cleanly between open C, G, D, Em, and Am chords.",
         "Play through the diatonic chords of a randomly chosen key.",
         "Practice barre chords (E-shape and A-shape) moving up the neck.",
         "Strum a I-V-vi-IV progression in a new key.",
+        "Play a triad (root, 3rd, 5th) on strings 1-2-3, then find the SAME triad again on strings 2-3-4, then 3-4-5 -- notice how the shape changes.",
+        "Practice all 3 inversions (root position, 1st inversion, 2nd inversion) of a triad on one set of adjacent strings.",
+        "Use the Arpeggio Visualizer to explore a 9th, 11th, or 13th chord shape and try outlining it over a static chord.",
+        "Pick a random root note and try to sing or hum a Major 3rd above it before checking yourself on the guitar.",
     ],
     "Fretboard Knowledge": [
         "Name every note on the low E string, low to high, without looking.",
@@ -362,12 +456,23 @@ EXERCISE_LIBRARY = {
         "Sing the root note of a chord immediately after strumming it.",
         "Play the Ear Training interval quiz for a few rounds.",
         "Try to find a melody you know by ear, one phrase at a time.",
+        "Play a few rounds of the Functional Ear Trainer -- it trains scale-degree recognition (the do/re/mi function of a note) rather than raw interval distance.",
     ],
     "Technique": [
         "Practice alternate picking on a chromatic exercise, slow and clean.",
-        "Work on legato (hammer-ons/pull-offs) on a single string.",
         "Practice string-skipping exercises across 3 strings.",
         "Play a simple riff cleanly at 3 different tempos.",
+        "Legato: pick one note, then play 3-4 hammer-ons/pull-offs in a row without picking again. Make the last note as loud as the first.",
+        "Vibrato: fret any note and hold it 4 seconds -- 2 seconds slow & wide, then 2 seconds fast & narrow. Notice the difference.",
+        "String bending: pick a note, bend it up a half step, then a whole step, then a step-and-a-half, checking each against the actual fretted target note.",
+        "Slides: slide between two frets exactly on the beat with a metronome -- the slide itself should be audible and land precisely on time.",
+        "Muting: play a descending scale and use your fretting-hand fingers to mute every string you're not actively playing.",
+    ],
+    "Rhythm & Groove": [
+        "Play a scale in straight 8th notes on the Metronome page, locking every note to the click.",
+        "Practice a syncopated 16th-note strumming pattern, deliberately accenting the off-beats.",
+        "Play along with a backing or drum track and focus on locking your strums in with the kick and snare, not just 'staying in time'.",
+        "Only increase the metronome tempo by 5 BPM once you can play a passage cleanly 3 times in a row at the current one.",
     ],
 }
 
@@ -404,7 +509,10 @@ def generate_challenge_from_seed(seed: str) -> dict:
     """Build a challenge dict deterministically from any string seed."""
     rng = random.Random(seed)
     key = rng.choice(ALL_KEYS)
-    kind = rng.choice(["progression", "note_hunt", "scale_position", "interval", "arpeggio"])
+    kind = rng.choice([
+        "progression", "note_hunt", "scale_position", "interval", "arpeggio",
+        "technique", "rhythm", "warmup", "three_nps", "functional_ear", "triad_geometry",
+    ])
 
     if kind == "progression":
         pattern_name = rng.choice(list(COMMON_PROGRESSIONS.keys()))
@@ -434,11 +542,75 @@ def generate_challenge_from_seed(seed: str) -> dict:
             "title": "Ear Training Focus",
             "description": f"Score 5 correct **{interval_name}** identifications in a row on the Ear Training page.",
         }
-    # arpeggio
-    arpeggio_type = rng.choice(list(ARPEGGIO_INTERVALS.keys()))
+    if kind == "arpeggio":
+        arpeggio_type = rng.choice(list(ARPEGGIO_INTERVALS.keys()))
+        return {
+            "title": "Arpeggio Practice",
+            "description": f"Practice the **{key} {arpeggio_type}** arpeggio shape up and down the neck.",
+        }
+    if kind == "technique":
+        note = rng.choice(ALL_KEYS)
+        title, description = rng.choice([
+            ("Legato Focus",
+             "Pick one note, then play 3-4 hammer-ons/pull-offs in a row without picking again. "
+             "Focus on making the last note just as loud as the first."),
+            ("Vibrato Focus",
+             "Fret any note and hold it for 4 seconds: 2 seconds of slow, wide vibrato, "
+             "then 2 seconds of fast, narrow vibrato."),
+            ("Bending Focus",
+             f"Fret a **{note}** anywhere on the neck and bend it up a whole step until it matches "
+             f"**{transpose(note, 2)}** -- check the pitch against that note played normally."),
+            ("Slide Focus",
+             "Pick a note and slide up 3 frets exactly on the beat, in time with a metronome -- "
+             "the slide should be audible and land precisely on the beat."),
+            ("Muting Focus",
+             "Play a descending scale and use your fretting-hand fingers to mute every string "
+             "you're not actively playing."),
+        ])
+        return {"title": title, "description": description}
+    if kind == "rhythm":
+        bpm = rng.choice([60, 70, 80, 90, 100, 110, 120])
+        description = rng.choice([
+            f"Use the Metronome page at **{bpm} BPM** and play the **{key} Major** scale in straight "
+            "8th notes, locking every note to the click.",
+            "Practice a syncopated 16th-note strumming pattern, deliberately accenting the off-beats.",
+            "Play along with any backing or drum track and focus on locking your strums in with the "
+            "kick and snare, not just 'staying in time'.",
+            f"Set the Metronome to **{bpm} BPM** and only increase the tempo by 5 BPM once you can "
+            "play a passage cleanly 3 times in a row.",
+        ])
+        return {"title": "Rhythm & Groove", "description": description}
+    if kind == "warmup":
+        description = rng.choice(EXERCISE_LIBRARY["Warm-Up"])
+        return {"title": "Warm-Up", "description": description}
+    if kind == "three_nps":
+        scale_type = rng.choice(["Major", "Natural Minor"])
+        start_fret = rng.choice([0, 2, 4, 5, 7, 9])
+        return {
+            "title": "3-Notes-Per-String Practice",
+            "description": (
+                f"On the Scale Reference page, set up a **{key} {scale_type}** Three-Notes-Per-String "
+                f"pattern starting around fret {start_fret}, then shift it up 2 frets at a time -- "
+                "practice moving smoothly across the whole neck instead of staying in one box."
+            ),
+        }
+    if kind == "functional_ear":
+        level = rng.choice(list(FUNCTIONAL_EAR_LEVELS.keys()))
+        return {
+            "title": "Functional Ear Training",
+            "description": (
+                f"Play 10 rounds of the Functional Ear Trainer at the **{level}** level -- focus on "
+                "hearing each note's function (its scale degree) rather than its raw pitch."
+            ),
+        }
+    # triad_geometry
+    quality = rng.choice(["Major", "Minor"])
     return {
-        "title": "Arpeggio Practice",
-        "description": f"Practice the **{key} {arpeggio_type}** arpeggio shape up and down the neck.",
+        "title": "Triad Geometry",
+        "description": (
+            f"Find a **{key} {quality}** triad (root, 3rd, 5th) on strings 1-2-3, then find the same "
+            "triad again on strings 2-3-4, then 3-4-5 -- use the Arpeggio Visualizer to check your work."
+        ),
     }
 
 

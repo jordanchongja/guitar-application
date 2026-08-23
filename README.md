@@ -13,7 +13,7 @@ modules/
   theory.py                    # Notes, scales, chords, progressions, arpeggios, circle of fifths,
                                 #   chord identification, practice/daily-challenge generators
   fretboard.py                 # Reusable Plotly fretboard renderer (static + clickable)
-  audio.py                     # Dynamic sine-wave tone generation for ear training
+  audio.py                     # Dynamic sine-wave tone/chord/cadence/click-track generation
   notation.py                  # Minimal treble-clef staff renderer (inline SVG)
   database.py                  # Practice logs + quiz scores: Google Sheets when
                                 #   configured, local SQLite fallback otherwise
@@ -31,6 +31,8 @@ pages/
   10_Sight_Reading_Trainer.py  # Extra - staff note -> fretboard position quiz
   11_Daily_Challenge.py        # Extra - "Riff of the Day", seeded per date
   12_Custom_Tuning_Builder.py  # Extra - build a tuning string-by-string
+  13_Functional_Ear_Trainer.py # Extra - Alain Benbassat method: cadence + scale-degree ID
+  14_Metronome.py              # Extra - click-track generator with tap tempo
 requirements.txt
 .streamlit/config.toml         # App theme
 ```
@@ -114,13 +116,39 @@ straight back to local SQLite if they're ever removed.
 - **Backing tracks**: `YOUTUBE_BACKING_TRACKS` in `modules/theory.py` currently
   points at a YouTube search query per key. Swap in real video URLs whenever
   you have specific jam tracks you like.
+- **Extended chords (9/11/13)** in the Arpeggio Visualizer list the full
+  stacked-thirds chord tones. A 6-string guitar can't voice all of them
+  uniquely at once, so real voicings use a subset -- this page shows every
+  occurrence of every chord tone across the neck (useful for outlining the
+  chord while soloing), rather than one fixed practical voicing.
+- **Technique exercises** (legato, vibrato, bending, slides, muting,
+  strumming, playing in the pocket) are given as precise written prompts,
+  not graded. Verifying bend pitch accuracy, vibrato quality, or clean
+  muting needs real audio input + pitch detection, which is out of scope for
+  a browser reference app with no microphone access.
+
+## Functional Ear Trainer
+
+`pages/13_Functional_Ear_Trainer.py` implements the Alain Benbassat method
+(the approach behind the well-known "Functional Ear Trainer" app and
+tonedear.com's functional/solfege exercise) -- distinct from
+`pages/4_Ear_Training.py`, which drills raw interval distance between two
+notes. Here, a short I-IV-V-I cadence establishes a key, then a single note
+plays; you identify that note's *scale degree* (its function within the
+key) via movable-do solfege, at three levels (Simple: 1/3/5, Diatonic:
+1-7, Chromatic: all 12). See `generate_cadence_and_tone_wav` in
+`modules/audio.py` and `FUNCTIONAL_EAR_LEVELS` in `modules/theory.py`.
 
 ## Roadmap
 
 See [claude_prompts_and_plan.md](claude_prompts_and_plan.md) for the original
 phase breakdown. All phases (1-4) and every "Additional Feature Suggestion"
 from that plan are now implemented, including the Arpeggio Visualizer,
-Sight-Reading Trainer, Daily Challenge, and Custom Tuning Builder.
+Sight-Reading Trainer, Daily Challenge, and Custom Tuning Builder. Beyond
+that original plan, the app now also has a Functional Ear Trainer, a
+Metronome with tap tempo, real 3-notes-per-string scale shapes, extended
+(9/11/13) chords, and a much larger Practice Generator / Daily Challenge
+content library covering technique, rhythm, and fretboard-geometry work.
 
 ## Notes on the Sight-Reading Trainer
 
