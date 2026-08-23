@@ -2,7 +2,7 @@
 
 A Streamlit-based guitar learning app: scale reference, fretboard note-finding
 quiz, chord progression generator, interval ear-training, and a practice
-progress dashboard backed by SQLite. Built following the phased plan in
+progress dashboard. Built following the phased plan in
 [claude_prompts_and_plan.md](claude_prompts_and_plan.md).
 
 ## Project Structure
@@ -15,7 +15,8 @@ modules/
   fretboard.py                 # Reusable Plotly fretboard renderer (static + clickable)
   audio.py                     # Dynamic sine-wave tone generation for ear training
   notation.py                  # Minimal treble-clef staff renderer (inline SVG)
-  database.py                  # SQLite persistence (practice logs, quiz scores)
+  database.py                  # Practice logs + quiz scores: Google Sheets when
+                                #   configured, local SQLite fallback otherwise
   settings.py                  # Shared sidebar controls (Left-Handed Mode, Tuning)
 pages/
   1_Scale_Reference.py         # Phase 1 - key/scale/CAGED-position browser
@@ -49,8 +50,58 @@ streamlit run main.py
 ```
 
 Streamlit will auto-discover the `pages/` directory and build the sidebar
-navigation for you. `guitar_app.db` (SQLite) is created automatically on
-first run in the project root.
+navigation for you. With no extra setup, practice logs and quiz scores are
+stored in a local SQLite file (`guitar_app.db`, created automatically on
+first run) -- fine for local use, but see below before deploying.
+
+## Deploying privately (Streamlit Community Cloud)
+
+1. Push this repo to GitHub as a **private** repository.
+2. Sign in to [share.streamlit.io](https://share.streamlit.io) with that
+   GitHub account, click "New app," and point it at this repo / branch /
+   `main.py`. It picks up `requirements.txt` automatically.
+3. In the deployed app's Settings -> Sharing, restrict viewers to specific
+   email addresses instead of "public" -- anyone not on that list hits a
+   login wall even with the URL.
+4. Before (or after) deploying, set up Google Sheets persistence (next
+   section) and paste the same secrets into the app's Settings -> Secrets box.
+
+## Persistent storage (Google Sheets)
+
+**Important:** a hosted Streamlit app's local filesystem is not durable --
+every redeploy or idle-recycle wipes it, taking `guitar_app.db` with it. The
+app automatically switches from local SQLite to Google Sheets the moment it
+finds Sheets credentials in `st.secrets`, so practice history survives
+redeploys once this is set up. No page code needs to change either way --
+see `modules/database.py`.
+
+One-time setup:
+
+1. **Create a Google Cloud project** (or reuse one) at
+   [console.cloud.google.com](https://console.cloud.google.com).
+2. **Enable the Google Sheets API** for that project (APIs & Services ->
+   Enable APIs and Services -> search "Google Sheets API" -> Enable).
+3. **Create a service account** (APIs & Services -> Credentials -> Create
+   Credentials -> Service Account). Give it any name; no special roles
+   needed.
+4. **Create a JSON key** for that service account (on the service account's
+   page: Keys -> Add Key -> Create new key -> JSON) and download it.
+5. **Create a Google Sheet** (any name, e.g. "Guitar App Data") and **share
+   it** with the service account's email address (found in the JSON as
+   `client_email`, looks like `...@...iam.gserviceaccount.com`) as **Editor**.
+   The app creates the `practice_logs` and `quiz_scores` tabs itself on first
+   use -- you don't need to add anything inside the sheet.
+6. **Copy the spreadsheet ID** from its URL:
+   `https://docs.google.com/spreadsheets/d/THIS_PART/edit`.
+7. Copy [`.streamlit/secrets.toml.example`](.streamlit/secrets.toml.example)
+   to `.streamlit/secrets.toml` and fill in the values from the JSON key plus
+   the spreadsheet ID. For the deployed app, paste the same TOML into
+   Settings -> Secrets instead (or in addition -- `secrets.toml` is
+   gitignored either way, so it never gets pushed).
+
+That's it -- `log_practice`, `log_quiz_score`, and the dashboard's reads all
+route to the sheet automatically once those secrets are present, and fall
+straight back to local SQLite if they're ever removed.
 
 ## Notes on approximations
 
