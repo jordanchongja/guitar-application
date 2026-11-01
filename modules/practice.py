@@ -126,6 +126,13 @@ def set_active_items(item_ids: list[str]) -> None:
         store.set_state("active_session", s)
 
 
+def set_active_notes(text: str) -> None:
+    s = active_session()
+    if s is not None and s.get("notes", "") != text:
+        s["notes"] = text
+        store.set_state("active_session", s)
+
+
 def cancel_session() -> None:
     store.set_state("active_session", None)
 

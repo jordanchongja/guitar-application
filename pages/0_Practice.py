@@ -56,7 +56,21 @@ if active:
 
     clock()
 
-    # What are you working on? Tap chips. Top row: what you picked + what's in progress
+    # What you practised, in your own words: the main log. Saved as you go (when you tap away
+    # from the box), so it survives the phone sleeping just like the timer.
+    st.text_area(
+        "What are you practising?",
+        value=active.get("notes", ""),
+        key="session_notes",
+        height=130,
+        placeholder="e.g. Everything chorus solo, slides still sloppy. 10 min minor pentatonic box 1 "
+                    "at 70 bpm. Noodled over a blues backing track.",
+        on_change=lambda: P.set_active_notes(st.session_state.session_notes.strip()),
+    )
+
+    # Optional: tag the map items / songs you touched (gives the "next time" notes and rusty tracking).
+    st.markdown("**Tag what you touched** :gray[(optional)]")
+    # Top row: what you picked + what's in progress
     # (or, on a fresh map, good starting points). Below: browse any area of the map.
     picked = list(active.get("items", []))
     quick = [r["id"] for r in P.in_progress()][:10]
@@ -69,7 +83,6 @@ if active:
                 firsts[r["branch"]] = r["id"]
         quick += [i for i in firsts.values() if i not in quick]
         quick += [s["id"] for s in P.songs() if s["id"] not in quick][:4]
-    st.markdown("**What are you working on?** Tap everything you touch.")
     top = list(dict.fromkeys(picked + quick))
     ver = st.session_state.setdefault("chip_ver", 0)   # bumped on every change -> fresh widgets
     sel_top = st.pills("Suggestions", top, selection_mode="multi", default=picked, format_func=label,
@@ -131,7 +144,9 @@ if active:
                 note = st.text_input("Next time", key=f"note_{i}",
                                      placeholder="Next time: e.g. bridge bars 17–24 at 60 bpm")
                 updates[i] = {"status": status, "note": note.strip(), "bpm": bpm.strip()}
-            notes = st.text_area("Session notes (optional)", height=80)
+            notes = st.text_area("What you practised",
+                                 value=st.session_state.get("session_notes", active.get("notes", "")),
+                                 height=100)
             take = st.audio_input("Record a take (optional)")
             col_a, col_b = st.columns(2)
             save = col_a.form_submit_button("Save session", type="primary", icon=":material/check:",
@@ -183,12 +198,12 @@ if sess:
     last_items = [r for r in items if r["session_id"] == last["id"]]
     with st.container(border=True):
         st.markdown(f"**Last time** · {P.ago(last['start'])} · {fmt_minutes(float(last['minutes'] or 0))}")
+        if last.get("notes"):
+            st.markdown("  \n".join("> " + line for line in last["notes"].splitlines()))
         for r in last_items:
             row = cat.get(r["item_id"], {}).get("row", {})
             nxt = r["note"] or row.get("next_note", "")
             st.markdown(f"- {label(r['item_id'])}" + (f"  \n  :material/flag: *{nxt}*" if nxt else ""))
-        if last.get("notes"):
-            st.caption(last["notes"])
         if last.get("recording"):
             st.markdown(f":material/mic: [Your last recording]({last['recording']})"
                         if last["recording"].startswith("http") else f":material/mic: {last['recording']}")
