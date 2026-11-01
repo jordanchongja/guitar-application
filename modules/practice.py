@@ -126,6 +126,32 @@ def set_active_items(item_ids: list[str]) -> None:
         store.set_state("active_session", s)
 
 
+def elapsed_seconds(s: dict) -> int:
+    """Seconds actually practised in the running session (paused time excluded)."""
+    now = store.now()
+    total = (now - dt.datetime.fromisoformat(s["start"])).total_seconds()
+    paused = float(s.get("paused_secs", 0))
+    if s.get("paused_at"):
+        paused += (now - dt.datetime.fromisoformat(s["paused_at"])).total_seconds()
+    return max(0, int(total - paused))
+
+
+def pause_session() -> None:
+    s = active_session()
+    if s is not None and not s.get("paused_at"):
+        s["paused_at"] = store.now().isoformat()
+        store.set_state("active_session", s)
+
+
+def resume_session() -> None:
+    s = active_session()
+    if s is not None and s.get("paused_at"):
+        s["paused_secs"] = float(s.get("paused_secs", 0)) + (
+            store.now() - dt.datetime.fromisoformat(s["paused_at"])).total_seconds()
+        s["paused_at"] = None
+        store.set_state("active_session", s)
+
+
 def set_active_notes(text: str) -> None:
     s = active_session()
     if s is not None and s.get("notes", "") != text:

@@ -44,17 +44,30 @@ def fmt_minutes(m: float) -> str:
 # ============================================================================ running session
 if active:
     start = dt.datetime.fromisoformat(active["start"])
+    paused = bool(active.get("paused_at"))
 
-    @st.fragment(run_every="1s")
-    def clock():
-        secs = int((store.now() - start).total_seconds())
+    def fmt_clock(secs: int) -> str:
         h, rem = divmod(max(secs, 0), 3600)
         m, s = divmod(rem, 60)
-        with st.container(border=True, horizontal=True, vertical_alignment="center"):
-            st.metric("Practising", f"{h}:{m:02d}:{s:02d}" if h else f"{m:02d}:{s:02d}",
-                      help=f"Started {start:%H:%M}")
+        return f"{h}:{m:02d}:{s:02d}" if h else f"{m:02d}:{s:02d}"
 
-    clock()
+    with st.container(border=True, horizontal=True, vertical_alignment="center"):
+        if paused:   # frozen clock, no need to tick
+            st.metric(":material/pause_circle: Paused", fmt_clock(P.elapsed_seconds(active)),
+                      help=f"Started {start:%H:%M}. Paused time isn't counted.")
+        else:
+            @st.fragment(run_every="1s")
+            def clock():
+                st.metric("Practising", fmt_clock(P.elapsed_seconds(active)), help=f"Started {start:%H:%M}")
+
+            clock()
+        if paused:
+            if st.button("Resume", type="primary", icon=":material/play_arrow:"):
+                P.resume_session()
+                st.rerun()
+        elif st.button("Pause", icon=":material/pause:"):
+            P.pause_session()
+            st.rerun()
 
     # What you practised, in your own words: the main log. Saved as you go (when you tap away
     # from the box), so it survives the phone sleeping just like the timer.
@@ -122,7 +135,7 @@ if active:
     st.space("small")
     with st.expander(":material/stop_circle: End session", expanded=False):
         with st.form("end_session"):
-            elapsed = max(1, round((store.now() - start).total_seconds() / 60))
+            elapsed = max(1, round(P.elapsed_seconds(P.active_session() or active) / 60))
             minutes = st.number_input("Minutes", 1, 600, int(elapsed), help="Adjust if you forgot to stop the timer")
             updates = {}
             for i in chosen:
