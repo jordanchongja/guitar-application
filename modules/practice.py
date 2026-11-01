@@ -173,6 +173,51 @@ def save_session(start: dt.datetime, minutes: int, updates: dict[str, dict], not
     cancel_session()
 
 
+def delete_session(session_id: str) -> None:
+    """Undo a session: remove it, its item lines and its Progress Dashboard row, and set each item's
+    'last practised' back to the latest remaining session that touched it. Statuses and notes you
+    set stay as they are (they're easy to change on the Pathway page)."""
+    from modules.database import delete_practice_log
+
+    sess = [s for s in store.read("sessions") if s["id"] == session_id]
+    if not sess:
+        return
+    s = sess[0]
+    store.write_all("sessions", [x for x in store.read("sessions") if x["id"] != session_id])
+    all_items = store.read("session_items")
+    touched = {r["item_id"] for r in all_items if r["session_id"] == session_id}
+    remaining = [r for r in all_items if r["session_id"] != session_id]
+    store.write_all("session_items", remaining)
+
+    latest = {}
+    for r in remaining:
+        if r["item_id"] in touched and r["date"] > latest.get(r["item_id"], ""):
+            latest[r["item_id"]] = r["date"]
+    for table in ("pathway", "songs"):
+        rows = store.read(table)
+        changed = False
+        for r in rows:
+            if r["id"] in touched:
+                r["last_practiced"] = latest.get(r["id"], "")
+                changed = True
+        if changed:
+            store.write_all(table, rows)
+    try:
+        delete_practice_log(s["start"][:10], int(float(s["minutes"] or 0)))
+    except Exception:
+        pass
+
+
+def sheet_url() -> str | None:
+    """Link to the Google Sheet behind the app (None when running on local storage)."""
+    from modules.database import _sheets_configured
+    import streamlit as st
+
+    if not _sheets_configured():
+        return None
+    return f"https://docs.google.com/spreadsheets/d/{st.secrets['gsheet']['spreadsheet_id']}/edit"
+
+
 def minutes_by_kind(days: int = 30) -> dict[str, int]:
     """Rough split of recent practice minutes across branches (a session's minutes are shared
     equally between the items touched)."""

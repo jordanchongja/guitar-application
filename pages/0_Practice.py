@@ -245,3 +245,32 @@ with st.expander("Forgot to start the timer? Log a past session"):
             P.save_session(start, int(mins), {i: {"status": "", "note": ""} for i in what}, note)
             st.toast("Logged", icon=":material/check_circle:")
             st.rerun()
+
+with st.expander(":material/edit_note: Manage past sessions"):
+    if not sess:
+        st.caption("No sessions yet.")
+    st.caption("Deleting a session removes it everywhere (log, Progress Dashboard) and resets each item's "
+               "'last practised' date. Recordings stay in your Drive folder.")
+    for s in sess[:15]:
+        names = [r["item"] for r in items if r["session_id"] == s["id"]]
+        with st.container(border=True, horizontal=True, vertical_alignment="center"):
+            st.markdown(f"**{s['start'][:16].replace('T', ' ')}** · {fmt_minutes(float(s['minutes'] or 0))}"
+                        + (f"  \n:gray[{', '.join(names)}]" if names else "  \n:gray[nothing tagged]"))
+            pending = st.session_state.get("confirm_delete") == s["id"]
+            if pending:
+                if st.button("Confirm", key=f"yes_{s['id']}", type="primary", icon=":material/delete:"):
+                    P.delete_session(s["id"])
+                    st.session_state.pop("confirm_delete", None)
+                    st.toast("Session deleted", icon=":material/delete:")
+                    st.rerun()
+                if st.button("Keep", key=f"no_{s['id']}"):
+                    st.session_state.pop("confirm_delete", None)
+                    st.rerun()
+            elif st.button("Delete", key=f"del_{s['id']}", icon=":material/delete:"):
+                st.session_state.confirm_delete = s["id"]
+                st.rerun()
+    if len(sess) > 15:
+        st.caption(f"Showing the latest 15 of {len(sess)}.")
+    url = P.sheet_url()
+    if url:
+        st.link_button("Open the Google Sheet", url, icon=":material/table:")

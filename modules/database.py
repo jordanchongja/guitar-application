@@ -183,6 +183,30 @@ def log_practice(duration_minutes: int, focus_area: str, date: str | None = None
         _sqlite_log_practice(duration_minutes, focus_area, date)
 
 
+def delete_practice_log(date: str, duration_minutes: int, focus_prefix: str = "Session:") -> bool:
+    """Remove one practice_logs row matching date + minutes (+ focus prefix). Used when a practice
+    session is deleted on the Practice page. Returns True if a row was removed."""
+    if _sheets_configured():
+        ws = _get_worksheet("practice_logs", tuple(PRACTICE_HEADERS))
+        values = ws.get_all_values()
+        for i in range(len(values) - 1, 0, -1):          # newest first; row 1 is the header
+            row = values[i] + ["", "", ""]
+            if row[0] == date and str(row[1]) == str(duration_minutes) and row[2].startswith(focus_prefix):
+                ws.delete_rows(i + 1)
+                _sheets_practice_rows.clear()
+                return True
+        return False
+    with _get_connection() as conn:
+        cur = conn.execute(
+            "SELECT id FROM practice_logs WHERE date = ? AND duration_minutes = ? AND focus_area LIKE ? "
+            "ORDER BY id DESC LIMIT 1", (date, duration_minutes, focus_prefix + "%"))
+        row = cur.fetchone()
+        if row:
+            conn.execute("DELETE FROM practice_logs WHERE id = ?", (row[0],))
+            conn.commit()
+        return bool(row)
+
+
 def log_quiz_score(quiz_name: str, score: int, total: int, date: str | None = None) -> None:
     date = date or dt.date.today().isoformat()
     if _sheets_configured():
