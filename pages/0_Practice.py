@@ -90,19 +90,25 @@ if active:
     init_songs = st.session_state.setdefault(f"init_songs_{ver}", picked_songs)
     init_map = st.session_state.setdefault(f"init_map_{ver}", picked_map)
 
-    # --- Songs: type a name (new songs are added to your catalogue automatically) or pick one
+    # --- Songs: pick ones you've played before; add new ones with a song + artist field below
     sel_songs = st.multiselect(
         "Songs", song_ids, default=[i for i in init_songs if i in song_ids], format_func=lambda i: cat[i]["label"],
-        accept_new_options=True, key=f"songs_{ver}",
-        placeholder="Type a song (new ones are added automatically)…")
-    new_song_ids = []
-    for s in sel_songs:
-        if s in cat:
-            new_song_ids.append(s)
-        elif str(s).strip():
-            is_link = "ultimate-guitar.com" in s
-            title, artist = P.parse_song_link(s) if is_link else (s.strip(), "")
-            new_song_ids.append(P.add_song(title or s, artist, s.strip() if is_link else ""))
+        key=f"songs_{ver}", placeholder="Pick a song you've played before…" if song_ids else "No songs yet: add one below")
+    new_song_ids = list(sel_songs)
+
+    with st.form(f"new_song_{ver}", border=False):     # new keys after each add -> empty boxes
+        c1, c2, c3 = st.columns([5, 4, 2], vertical_alignment="bottom")
+        new_title = c1.text_input("New song", placeholder="Song (or paste an Ultimate Guitar link)",
+                                  key=f"new_title_{ver}")
+        new_artist = c2.text_input("Artist", placeholder="Artist", key=f"new_artist_{ver}")
+        if c3.form_submit_button("Add", icon=":material/add:", width="stretch") and new_title.strip():
+            is_link = "ultimate-guitar.com" in new_title
+            title, artist = P.parse_song_link(new_title) if is_link else (new_title.strip(), "")
+            sid = P.add_song(title or new_title.strip(), new_artist.strip() or artist,
+                             new_title.strip() if is_link else "")
+            P.set_active_items(list(dict.fromkeys(picked + [sid])))
+            st.session_state.chip_ver = ver + 1
+            st.rerun()
 
     # --- Map items: optional tags (give per-item "next time" notes, tempo history, rusty tracking)
     st.markdown("**Tag skills from your map** :gray[(optional)]")
