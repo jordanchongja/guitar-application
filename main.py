@@ -30,6 +30,15 @@ Your **Left-Handed Mode** and **Tuning** choices in the sidebar apply across eve
 """
 )
 
+st.subheader("Practice tracker")
+track_cols = st.columns(3)
+with track_cols[0]:
+    st.page_link("pages/0_Practice.py", label="Practice (timer + log)", icon=":material/timer:")
+with track_cols[1]:
+    st.page_link("pages/0_Pathway.py", label="Pathway map & songs", icon=":material/route:")
+with track_cols[2]:
+    st.page_link("pages/5_Progress_Dashboard.py", label="Progress Dashboard", icon=":material/monitoring:")
+
 st.subheader("Reference")
 ref_cols = st.columns(3)
 with ref_cols[0]:

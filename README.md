@@ -25,6 +25,19 @@ system. Click those buttons if you're curious how they behave, just don't
 expect the numbers to be "yours" afterward. Everything else is genuinely
 usable start to finish.
 
+## Practice tracker (Practice + Pathway pages)
+
+- **Practice:** press Start, play whatever you feel like, tap what you touched, then End and leave a
+  one-line *next time* note per item (and optionally record a take). The timer survives your phone
+  locking: the start time is saved, elapsed time is computed from it. The page opens with *Last time*,
+  what's in progress and what's getting rusty, so coming back after a break is easy.
+- **Pathway:** a map of what's worth learning (fretboard, scales, chords, rhythm, technique, theory &
+  ear, application) with a concrete "done when" goal and practice tip per item, *ready to start* and
+  *rusty* hints, links into the app's tools, and your songs. Edit it freely in the app.
+- Data lives in the same Google Sheet (`pathway`, `songs`, `sessions`, `session_items`,
+  `practice_state`); recordings go to a Google Drive folder. Logging and editing need `app_password`.
+  `tools/export_practice.py` dumps everything as JSON (used to mirror practice into Obsidian).
+
 ## What's in it
 
 - **Reference** — scale/CAGED/3-notes-per-string fretboard views, a chord

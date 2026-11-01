@@ -5,3 +5,5 @@ venv/
 guitar_app.db
 .streamlit/secrets.toml
 *.log
+practice_data.json
+recordings/
