@@ -56,19 +56,40 @@ if active:
 
     clock()
 
-    # what are you working on? quick chips: in-progress things + whatever you already picked
+    # What are you working on? Tap chips. Top row: what you picked + what's in progress
+    # (or, on a fresh map, good starting points). Below: browse any area of the map.
     picked = list(active.get("items", []))
-    quick = [r["id"] for r in P.in_progress()][:12]
-    options = list(dict.fromkeys(picked + quick))
+    quick = [r["id"] for r in P.in_progress()][:10]
+    if len(quick) < 4:   # fresh map: suggest the first ready-to-start item in each branch + songs
+        rows = P.pathway()
+        ready = P.ready_to_start(rows)
+        firsts = {}
+        for r in rows:
+            if r["id"] in ready and r["branch"] not in firsts:
+                firsts[r["branch"]] = r["id"]
+        quick += [i for i in firsts.values() if i not in quick]
+        quick += [s["id"] for s in P.songs() if s["id"] not in quick][:4]
     st.markdown("**What are you working on?** Tap everything you touch.")
-    chosen = st.pills("Items", options, selection_mode="multi", default=picked, format_func=label,
-                      key="chips", label_visibility="collapsed") if options else []
-    others = [i for i in cat if i not in options]
-    extra = st.selectbox("Something else", others, index=None, format_func=label,
-                         placeholder="Add something else (search)…")
-    chosen = list(dict.fromkeys(list(chosen or []) + ([extra] if extra else [])))
+    top = list(dict.fromkeys(picked + quick))
+    ver = st.session_state.setdefault("chip_ver", 0)   # bumped on every change -> fresh widgets
+    sel_top = st.pills("Suggestions", top, selection_mode="multi", default=picked, format_func=label,
+                       key=f"chips_top_{ver}", label_visibility="collapsed")
+
+    area = st.segmented_control("Browse an area", list(BRANCH_ICONS) + ["Song"], key="browse_area",
+                                format_func=lambda b: f"{BRANCH_ICONS.get(b, ':material/music_note:')} {b}")
+    sel_area = []
+    if area:
+        in_area = [i for i, c in cat.items() if c["kind"] == area and i not in top]
+        if in_area:
+            sel_area = st.pills("In this area", in_area, selection_mode="multi", format_func=label,
+                                key=f"chips_{area}_{ver}", label_visibility="collapsed")
+        else:
+            st.caption("Nothing else here yet." if area != "Song" else "Add songs on the Pathway page.")
+    chosen = list(dict.fromkeys(list(sel_top or []) + list(sel_area or [])))
     if chosen != picked:
         P.set_active_items(chosen)
+        # picked items move to the top row (selected): new widget keys so they redraw from the saved list
+        st.session_state.chip_ver = ver + 1
         st.rerun()
 
     for i in chosen:
@@ -121,10 +142,12 @@ if active:
                 updates = {}
             rec_link = ""
             if take is not None:
+                fname = f"take-{start:%Y%m%d-%H%M}.wav"
                 try:
-                    rec_link = store.upload_recording(take.getvalue(), f"take-{start:%Y%m%d-%H%M}.wav")
+                    rec_link = store.upload_recording(take.getvalue(), fname)
                 except RuntimeError as e:
-                    st.warning(f"{e} The session is still saved.")
+                    # never lose a take: keep it in this browser session with a download button
+                    st.session_state.unsaved_take = {"name": fname, "data": take.getvalue(), "error": str(e)}
             P.save_session(start, int(minutes), updates, notes.strip(), rec_link)
             st.toast(f"Saved {fmt_minutes(minutes)} of practice", icon=":material/check_circle:")
             st.rerun()
@@ -135,6 +158,18 @@ if active:
 
 
 # ============================================================================ not practising
+if st.session_state.get("unsaved_take"):
+    t = st.session_state.unsaved_take
+    with st.container(border=True):
+        st.warning(f"Your session was saved, but the recording couldn't be uploaded: {t['error']}",
+                   icon=":material/mic_off:")
+        c1, c2 = st.columns(2)
+        c1.download_button("Download the take", t["data"], t["name"], "audio/wav",
+                           icon=":material/download:", width="stretch")
+        if c2.button("Dismiss", width="stretch"):
+            del st.session_state.unsaved_take
+            st.rerun()
+
 if st.button("Start practising", type="primary", icon=":material/play_arrow:", width="stretch"):
     P.start_session()
     st.rerun()

@@ -171,6 +171,25 @@ def password_gate(where: str = "main") -> bool:
 def upload_recording(data: bytes, filename: str, mime: str = "audio/wav") -> str:
     """Save a take. Hosted: Google Drive folder (secrets: recordings_folder_id). Local: ./recordings/.
     Returns a link/path. Raises RuntimeError with a readable message on failure."""
+    # Preferred: a small Apps Script web app that runs as you and saves into your Drive
+    # (service accounts can't own files in a personal Drive). See tools/recordings_apps_script.gs.
+    script_url = _secret("recordings_script_url")
+    if script_url:
+        import base64
+
+        import requests
+
+        try:
+            r = requests.post(script_url, timeout=90, json={
+                "token": _secret("recordings_token", ""), "name": filename, "mime": mime,
+                "data": base64.b64encode(data).decode()})
+            res = r.json()
+        except Exception as e:
+            raise RuntimeError(f"Couldn't reach the recordings script ({e}).")
+        if res.get("error") or not res.get("url"):
+            raise RuntimeError(f"The recordings script said: {res.get('error', 'no link returned')}")
+        return res["url"]
+
     folder = _secret("recordings_folder_id")
     if not (_sheets_configured() and folder):
         out = Path(__file__).resolve().parent.parent / "recordings"
