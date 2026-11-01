@@ -146,6 +146,17 @@ _ITEMS = [
      "Slow 2-chord vamp; aim for the chord tone on beat 1", T_ARP),
     ("Application", "Write a riff or short solo", "Compose and record an 8-bar riff or solo",
      "Use only what you know; record it", None),
+
+    # Added later (kept at the end so existing ids stay the same)
+    ("Scales", "Scale sequences (3s, 4s, thirds)",
+     "Play the major scale and pentatonic in groups of 3, 4 and in thirds, clean at 80 bpm",
+     "Clean 3 times in a row -> +4 bpm; always finish on a root note so you hear 'home'", T_SCALES),
+    ("Technique", "Arpeggiated picking through chord shapes",
+     "Pick through a chord progression one note at a time, evenly, with notes ringing (e.g. Weird Fishes)",
+     "Hold the whole chord shape, pick slowly to a click, then play along with the song", T_METRO),
+    ("Application", "Learn a riff from a song you love",
+     "Learn a riff clean at tempo, then use its lick over a backing track in the same key",
+     "Keep riffs in Songs as Wishlist; loop the hard 2 beats; then borrow the lick and vary it", None),
 ]
 
 
