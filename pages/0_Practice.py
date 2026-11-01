@@ -81,13 +81,33 @@ if active:
         on_change=lambda: P.set_active_notes(st.session_state.session_notes.strip()),
     )
 
-    # Optional: tag the map items / songs you touched (gives the "next time" notes and rusty tracking).
-    st.markdown("**Tag what you touched** :gray[(optional)]")
-    # Top row: what you picked + what's in progress
-    # (or, on a fresh map, good starting points). Below: browse any area of the map.
     picked = list(active.get("items", []))
-    quick = [r["id"] for r in P.in_progress()][:10]
-    if len(quick) < 4:   # fresh map: suggest the first ready-to-start item in each branch + songs
+    ver = st.session_state.setdefault("chip_ver", 0)   # bumped on every change -> fresh widgets
+    song_ids = [i for i, c in cat.items() if c["kind"] == "Song"]
+    picked_songs = [i for i in picked if i in song_ids]
+    picked_map = [i for i in picked if i not in song_ids]
+    # what each widget started with this version (so external changes aren't read as deselections)
+    init_songs = st.session_state.setdefault(f"init_songs_{ver}", picked_songs)
+    init_map = st.session_state.setdefault(f"init_map_{ver}", picked_map)
+
+    # --- Songs: type a name (new songs are added to your catalogue automatically) or pick one
+    sel_songs = st.multiselect(
+        "Songs", song_ids, default=[i for i in init_songs if i in song_ids], format_func=lambda i: cat[i]["label"],
+        accept_new_options=True, key=f"songs_{ver}",
+        placeholder="Type a song (new ones are added automatically)…")
+    new_song_ids = []
+    for s in sel_songs:
+        if s in cat:
+            new_song_ids.append(s)
+        elif str(s).strip():
+            is_link = "ultimate-guitar.com" in s
+            title, artist = P.parse_song_link(s) if is_link else (s.strip(), "")
+            new_song_ids.append(P.add_song(title or s, artist, s.strip() if is_link else ""))
+
+    # --- Map items: optional tags (give per-item "next time" notes, tempo history, rusty tracking)
+    st.markdown("**Tag skills from your map** :gray[(optional)]")
+    quick = [r["id"] for r in P.in_progress() if r["id"] not in song_ids][:10]
+    if len(quick) < 4:   # fresh map: suggest the first ready-to-start item in each branch
         rows = P.pathway()
         ready = P.ready_to_start(rows)
         firsts = {}
@@ -95,14 +115,11 @@ if active:
             if r["id"] in ready and r["branch"] not in firsts:
                 firsts[r["branch"]] = r["id"]
         quick += [i for i in firsts.values() if i not in quick]
-        quick += [s["id"] for s in P.songs() if s["id"] not in quick][:4]
-    top = list(dict.fromkeys(picked + quick))
-    ver = st.session_state.setdefault("chip_ver", 0)   # bumped on every change -> fresh widgets
-    sel_top = st.pills("Suggestions", top, selection_mode="multi", default=picked, format_func=label,
+    top = list(dict.fromkeys(init_map + picked_map + quick))
+    sel_top = st.pills("Suggestions", top, selection_mode="multi", default=init_map, format_func=label,
                        key=f"chips_top_{ver}", label_visibility="collapsed")
-
-    area = st.segmented_control("Browse an area", list(BRANCH_ICONS) + ["Song"], key="browse_area",
-                                format_func=lambda b: f"{BRANCH_ICONS.get(b, ':material/music_note:')} {b}")
+    area = st.segmented_control("Browse an area", list(BRANCH_ICONS), key="browse_area",
+                                format_func=lambda b: f"{BRANCH_ICONS[b]} {b}")
     sel_area = []
     if area:
         in_area = [i for i, c in cat.items() if c["kind"] == area and i not in top]
@@ -110,13 +127,30 @@ if active:
             sel_area = st.pills("In this area", in_area, selection_mode="multi", format_func=label,
                                 key=f"chips_{area}_{ver}", label_visibility="collapsed")
         else:
-            st.caption("Nothing else here yet." if area != "Song" else "Add songs on the Pathway page.")
-    chosen = list(dict.fromkeys(list(sel_top or []) + list(sel_area or [])))
+            st.caption("Nothing else here yet.")
+
+    # apply only what changed on this page, so edits from another tab/device aren't overwritten
+    removed = (set(init_songs) - set(new_song_ids)) | (set(init_map) - set(sel_top or []))
+    added = [i for i in new_song_ids + list(sel_top or []) + list(sel_area or []) if i not in picked]
+    chosen = list(dict.fromkeys([i for i in picked if i not in removed] + added))
     if chosen != picked:
         P.set_active_items(chosen)
-        # picked items move to the top row (selected): new widget keys so they redraw from the saved list
+        # picked items move into the selected lists: new widget keys so they redraw from the saved list
         st.session_state.chip_ver = ver + 1
         st.rerun()
+
+    # --- Metronome: loops while you play; its tempo pre-fills the bpm boxes when you end the session
+    with st.expander(":material/timer_play: Metronome" + (f" · {active['bpm']} bpm" if active.get("bpm") else "")):
+        c1, c2 = st.columns([2, 1])
+        bpm_now = c1.number_input("Tempo (bpm)", 30, 260, int(active.get("bpm") or 80), step=2, key="metro_bpm",
+                                  on_change=lambda: P.set_active_field("bpm", int(st.session_state.metro_bpm)))
+        beats = c2.selectbox("Beats", [2, 3, 4, 6], index=2, key="metro_beats")
+        from modules.audio import generate_metronome_click_wav
+
+        bars = 4
+        st.audio(generate_metronome_click_wav(int(bpm_now), beats, bars * beats * 60 / bpm_now + 1e-6),
+                 format="audio/wav", loop=True)
+        st.caption("Press play: it loops until you stop it. Accented click on beat 1.")
 
     for i in chosen:
         row = cat[i]["row"]
@@ -135,8 +169,12 @@ if active:
     st.space("small")
     with st.expander(":material/stop_circle: End session", expanded=False):
         with st.form("end_session"):
-            elapsed = max(1, round(P.elapsed_seconds(P.active_session() or active) / 60))
-            minutes = st.number_input("Minutes", 1, 600, int(elapsed), help="Adjust if you forgot to stop the timer")
+            st.caption("Minutes are taken from the timer when you press Save (paused time excluded).")
+            adjust = st.checkbox("Adjust minutes (e.g. forgot to pause)")
+            manual_minutes = st.number_input("Minutes practised", 1, 600,
+                                             max(1, round(P.elapsed_seconds(active) / 60)),
+                                             help="Only used when 'Adjust minutes' is ticked")
+            metro = active.get("bpm")
             updates = {}
             for i in chosen:
                 c = cat[i]
@@ -152,8 +190,9 @@ if active:
                 col1, col2 = st.columns([2, 1])
                 status = col1.selectbox("Status", statuses, index=statuses.index(default), key=f"st_{i}",
                                         label_visibility="collapsed")
-                bpm = col2.text_input("bpm", value=c["row"].get("bpm", ""), key=f"bpm_{i}",
-                                      placeholder="bpm", label_visibility="collapsed")
+                bpm = col2.text_input("bpm", value=str(metro or c["row"].get("bpm", "")), key=f"bpm_{i}",
+                                      placeholder="bpm", label_visibility="collapsed",
+                                      help="Pre-filled from the metronome. Clear it if you didn't play this to a click.")
                 note = st.text_input("Next time", key=f"note_{i}",
                                      placeholder="Next time: e.g. bridge bars 17–24 at 60 bpm")
                 updates[i] = {"status": status, "note": note.strip(), "bpm": bpm.strip()}
@@ -166,8 +205,9 @@ if active:
                                             width="stretch")
             discard = col_b.form_submit_button("Discard", icon=":material/delete:", width="stretch")
         if save:
-            if not updates:
-                updates = {}
+            # minutes from the timer at the moment you press Save, unless you chose to adjust
+            minutes = int(manual_minutes) if adjust else max(
+                1, round(P.elapsed_seconds(P.active_session() or active) / 60))
             rec_link = ""
             if take is not None:
                 fname = f"take-{start:%Y%m%d-%H%M}.wav"

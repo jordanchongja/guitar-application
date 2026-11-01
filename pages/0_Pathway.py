@@ -82,6 +82,9 @@ if branch == "Songs":
             c3, c4 = st.columns(2)
             key = c3.text_input("Key")
             capo = c4.text_input("Capo")
+            if not title.strip() and "ultimate-guitar.com" in url:
+                title, artist = P.parse_song_link(url)[0], artist or P.parse_song_link(url)[1]
+            st.caption("Tip: paste an Ultimate Guitar link and leave the title empty: it's filled in for you.")
             if st.form_submit_button("Add song", type="primary") and title.strip():
                 n = next_song_number(song_rows)
                 store.append("songs", {"id": f"song{n}", "title": title.strip(), "artist": artist.strip(),
@@ -121,6 +124,9 @@ if branch == "Songs":
                     st.caption(" · ".join(bits))
                 if s["next_note"]:
                     st.markdown(f":material/flag: *{s['next_note']}*")
+                tempo = P.tempo_history(s["id"])
+                if len(tempo) >= 2:
+                    st.markdown(f":material/trending_up: **Tempo** {' → '.join(str(b) for _, b in tempo)} bpm")
                 if s["url"]:
                     st.markdown(f"[Open tab]({s['url']})")
     st.stop()
@@ -165,6 +171,10 @@ for r in items:
             st.markdown(f":material/target: {r['goal']}")
         if r["how"]:
             st.caption(f":material/tips_and_updates: {r['how']}")
+        tempo = P.tempo_history(r["id"])
+        if len(tempo) >= 2:
+            st.markdown(f":material/trending_up: **Tempo** {' → '.join(str(b) for _, b in tempo)} bpm "
+                        f":gray[since {tempo[0][0]}]")
         meta = [x for x in [f"{r['bpm']} bpm" if r["bpm"] else "",
                             f"last practised {P.ago(r['last_practiced'])}" if r["last_practiced"] else ""] if x]
         if r["next_note"] or meta:

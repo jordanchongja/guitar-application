@@ -25,7 +25,7 @@ TABLES: dict[str, list[str]] = {
     "songs": ["id", "title", "artist", "url", "key", "capo", "status", "last_practiced",
               "next_note", "bpm", "added"],
     "sessions": ["id", "start", "end", "minutes", "items", "notes", "recording"],
-    "session_items": ["session_id", "date", "item_id", "item", "status", "note"],
+    "session_items": ["session_id", "date", "item_id", "item", "status", "note", "bpm"],
     "practice_state": ["key", "value"],
 }
 
@@ -39,7 +39,17 @@ def _ws(name: str):
 
     sh = _get_spreadsheet()
     try:
-        return sh.worksheet(name)
+        ws = sh.worksheet(name)
+        # Columns added in a later version (e.g. bpm on session_items): rewrite the sheet in the
+        # current column order, keeping all existing data.
+        values = ws.get_all_values()
+        if values and values[0] != TABLES[name]:
+            head = values[0]
+            rows = [[(r[head.index(c)] if c in head and head.index(c) < len(r) else "") for c in TABLES[name]]
+                    for r in values[1:]]
+            ws.clear()
+            ws.update(values=[TABLES[name]] + rows, range_name="A1")
+        return ws
     except gspread.WorksheetNotFound:
         ws = sh.add_worksheet(title=name, rows=1000, cols=len(TABLES[name]))
         ws.update(values=[TABLES[name]], range_name="A1")

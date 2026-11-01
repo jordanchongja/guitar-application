@@ -126,6 +126,48 @@ def set_active_items(item_ids: list[str]) -> None:
         store.set_state("active_session", s)
 
 
+def tempo_history(item_id: str, limit: int = 8) -> list[tuple[str, int]]:
+    """[(date, bpm), ...] oldest first, from every session where you logged a tempo for this item."""
+    pts = []
+    for r in store.read("session_items"):
+        if r["item_id"] == item_id and str(r.get("bpm", "")).strip():
+            try:
+                pts.append((r["date"], int(float(r["bpm"]))))
+            except ValueError:
+                pass
+    pts.sort()
+    return pts[-limit:]
+
+
+def parse_song_link(url: str) -> tuple[str, str]:
+    """Title and artist from an Ultimate Guitar link, e.g.
+    tabs.ultimate-guitar.com/tab/the-black-skirts/everything-chords-2378943 -> ('Everything', 'The Black Skirts')."""
+    import re
+
+    m = re.search(r"ultimate-guitar\.com/tab/([^/]+)/([^/?#]+)", url or "")
+    if not m:
+        return "", ""
+    artist = m.group(1).replace("-", " ").title()
+    slug = re.sub(r"-(chords|tabs?|ukulele|bass|power|guitar-pro|official|video)(-\d+)?$", "", m.group(2))
+    slug = re.sub(r"-\d+$", "", slug)
+    slug = re.sub(r"-(chords|tabs?|official)$", "", slug)
+    return slug.replace("-", " ").title(), artist
+
+
+def add_song(title: str, artist: str = "", url: str = "", status: str = "Learning", key: str = "",
+             capo: str = "") -> str:
+    """Create a song in the catalogue and return its id (reuses an existing song with the same title)."""
+    rows = songs()
+    for s in rows:
+        if s["title"].strip().lower() == title.strip().lower():
+            return s["id"]
+    nums = [int(s["id"][4:]) for s in rows if s["id"].startswith("song") and s["id"][4:].isdigit()]
+    sid = f"song{max(nums + [0]) + 1}"
+    store.append("songs", {"id": sid, "title": title.strip(), "artist": artist.strip(), "url": url.strip(),
+                           "key": key, "capo": capo, "status": status, "added": store.now().date().isoformat()})
+    return sid
+
+
 def elapsed_seconds(s: dict) -> int:
     """Seconds actually practised in the running session (paused time excluded)."""
     now = store.now()
@@ -149,6 +191,13 @@ def resume_session() -> None:
         s["paused_secs"] = float(s.get("paused_secs", 0)) + (
             store.now() - dt.datetime.fromisoformat(s["paused_at"])).total_seconds()
         s["paused_at"] = None
+        store.set_state("active_session", s)
+
+
+def set_active_field(field: str, value) -> None:
+    s = active_session()
+    if s is not None and s.get(field) != value:
+        s[field] = value
         store.set_state("active_session", s)
 
 
@@ -197,7 +246,8 @@ def save_session(start: dt.datetime, minutes: int, updates: dict[str, dict], not
     for item_id, u in updates.items():
         store.append("session_items", {"session_id": sid, "date": day, "item_id": item_id,
                                        "item": cat.get(item_id, {}).get("label", item_id),
-                                       "status": u.get("status", ""), "note": u.get("note", "")})
+                                       "status": u.get("status", ""), "note": u.get("note", ""),
+                                       "bpm": u.get("bpm", "")})
 
     # 3. keep the existing Progress Dashboard in the loop
     kinds = [cat[i]["kind"] for i in updates if i in cat]
@@ -269,6 +319,48 @@ def minutes_by_kind(days: int = 30) -> dict[str, int]:
             kind = cat.get(i, {}).get("kind", "Other")
             out[kind] = out.get(kind, 0) + mins / max(len(ids), 1)
     return {k: round(v) for k, v in out.items()}
+
+
+def month_recap() -> dict:
+    """This month vs last month, plus areas you haven't touched in a while (for the home page)."""
+    today = store.now().date()
+    this_start = today.replace(day=1)
+    last_start = (this_start - dt.timedelta(days=1)).replace(day=1)
+    sess = store.read("sessions")
+    items = store.read("session_items")
+
+    def in_range(d, a, b):
+        return a.isoformat() <= d[:10] < b.isoformat()
+
+    this = [s for s in sess if s["start"][:10] >= this_start.isoformat()]
+    last = [s for s in sess if in_range(s["start"], last_start, this_start)]
+    mins = lambda ss: round(sum(float(s["minutes"] or 0) for s in ss))
+    ids = {s["id"] for s in this}
+    cat = catalog()
+    touched = [r for r in items if r["session_id"] in ids]
+    songs_touched = sorted({r["item"] for r in touched if cat.get(r["item_id"], {}).get("kind") == "Song"})
+
+    # neglected: branches with no tagged practice in 21+ days (only once you've logged something)
+    last_by_kind = {}
+    for r in items:
+        kind = cat.get(r["item_id"], {}).get("kind")
+        if kind and kind != "Song" and r["date"] > last_by_kind.get(kind, ""):
+            last_by_kind[kind] = r["date"]
+    from modules.pathway_seed import BRANCHES
+    neglected = []
+    if items:
+        for b in BRANCHES:
+            d = last_by_kind.get(b)
+            n = days_since(d) if d else None
+            if n is None or n >= 21:
+                neglected.append((b, n))
+    return {
+        "month": this_start.strftime("%B"),
+        "minutes": mins(this), "last_minutes": mins(last),
+        "sessions": len(this), "days": len({s["start"][:10] for s in this}),
+        "songs": songs_touched, "neglected": neglected,
+        "last_session": max(sess, key=lambda s: s["start"]) if sess else None,
+    }
 
 
 def streak(days: list[str]) -> int:

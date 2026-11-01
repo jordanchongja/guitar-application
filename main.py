@@ -30,6 +30,35 @@ Your **Left-Handed Mode** and **Tuning** choices in the sidebar apply across eve
 """
 )
 
+from modules import practice_store as _store
+
+if _store.unlocked():
+    from modules import practice as P
+    from modules.pathway_seed import BRANCH_ICONS
+
+    rc = P.month_recap()
+    with st.container(border=True):
+        top = st.container(horizontal=True, vertical_alignment="center")
+        top.subheader(f"Your {rc['month']}")
+        top.page_link("pages/0_Practice.py", label="Start practising", icon=":material/play_arrow:")
+        delta = rc["minutes"] - rc["last_minutes"]
+        with st.container(horizontal=True):
+            st.metric("Minutes", rc["minutes"], f"{delta:+d} vs last month" if rc["last_minutes"] else None,
+                      border=True)
+            st.metric("Sessions", rc["sessions"], border=True)
+            st.metric("Days practised", rc["days"], border=True)
+        if rc["songs"]:
+            st.markdown(":material/music_note: **Songs this month:** " + ", ".join(rc["songs"]))
+        if rc["neglected"]:
+            names = [f"{BRANCH_ICONS.get(b, '')} {b}" + (f" ({n} days)" if n else " (never)") for b, n in rc["neglected"]]
+            st.markdown(":material/notifications: **Haven't touched in a while:** " + " · ".join(names))
+        ls = rc["last_session"]
+        if ls and ls.get("notes"):
+            st.caption(f"Last time ({P.ago(ls['start'])}): {ls['notes']}")
+else:
+    with st.expander(":material/lock: Your practice summary"):
+        _store.password_gate()
+
 st.subheader("Practice tracker")
 track_cols = st.columns(3)
 with track_cols[0]:
