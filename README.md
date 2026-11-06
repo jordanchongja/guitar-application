@@ -31,6 +31,8 @@ usable start to finish.
   one-line *next time* note per item (and optionally record a take). The timer survives your phone
   locking: the start time is saved, elapsed time is computed from it. The page opens with *Last time*,
   what's in progress and what's getting rusty, so coming back after a break is easy.
+- **Floating Practice button:** the corner button on every other page shows what you're working on, and
+  starts, pauses and tags a session without leaving the page. Saving a session happens on Practice.
 - **Pathway:** a map of what's worth learning (fretboard, scales, chords, rhythm, technique, theory &
   ear, application) with a concrete "done when" goal and practice tip per item, *ready to start* and
   *rusty* hints, links into the app's tools, and your songs. Edit it freely in the app.
@@ -99,7 +101,7 @@ pages/
   2_Fretboard_Tester.py        # note-finding quiz
   3_Chord_Progressions.py      # diatonic chords + progression generator
   4_Ear_Training.py            # interval ear training
-  5_Progress_Dashboard.py      # practice log + quiz score history
+  5_Progress_Dashboard.py      # practice minutes + quiz score history
   6_Chord_Dictionary.py        # click frets, app names the chord
   7_Circle_of_Fifths.py        # interactive circle of fifths
   8_Arpeggio_Visualizer.py     # arpeggio + extended chord shapes on the neck

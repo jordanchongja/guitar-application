@@ -22,8 +22,9 @@ def init_global_state() -> None:
     st.session_state.setdefault("custom_tuning_notes", list(TUNING_PRESETS[DEFAULT_TUNING_NAME]))
 
 
-def render_sidebar_settings() -> dict:
-    """Render the shared settings widgets in the sidebar and return their values."""
+def render_sidebar_settings(floating_practice: bool = True) -> dict:
+    """Render the shared settings widgets in the sidebar and return their values. Also draws the
+    floating Practice button, unless the page turns it off."""
     init_global_state()
 
     tuning_options = list(TUNING_PRESETS.keys()) + [CUSTOM_TUNING_LABEL]
@@ -34,6 +35,11 @@ def render_sidebar_settings() -> dict:
         st.selectbox("Tuning", options=tuning_options, key="tuning_name")
         st.slider("Frets shown", min_value=12, max_value=24, key="num_frets")
         st.divider()
+
+    if floating_practice:
+        from modules.practice_panel import render_floating_practice
+
+        render_floating_practice()
 
     if st.session_state["tuning_name"] == CUSTOM_TUNING_LABEL:
         tuning = st.session_state["custom_tuning_notes"]

@@ -13,10 +13,11 @@ import streamlit as st
 from modules import practice as P
 from modules import practice_store as store
 from modules.pathway_seed import BRANCH_ICONS, SONG_STATUSES, STATUSES
+from modules.practice_panel import render_current_work
 from modules.settings import render_sidebar_settings
 
 st.set_page_config(page_title="Practice", page_icon=":material/timer:", layout="centered")
-render_sidebar_settings()
+render_sidebar_settings(floating_practice=False)
 
 st.title("Practice")
 
@@ -46,19 +47,14 @@ if active:
     start = dt.datetime.fromisoformat(active["start"])
     paused = bool(active.get("paused_at"))
 
-    def fmt_clock(secs: int) -> str:
-        h, rem = divmod(max(secs, 0), 3600)
-        m, s = divmod(rem, 60)
-        return f"{h}:{m:02d}:{s:02d}" if h else f"{m:02d}:{s:02d}"
-
     with st.container(border=True, horizontal=True, vertical_alignment="center"):
         if paused:   # frozen clock, no need to tick
-            st.metric(":material/pause_circle: Paused", fmt_clock(P.elapsed_seconds(active)),
+            st.metric(":material/pause_circle: Paused", P.fmt_clock(P.elapsed_seconds(active)),
                       help=f"Started {start:%H:%M}. Paused time isn't counted.")
         else:
             @st.fragment(run_every="1s")
             def clock():
-                st.metric("Practising", fmt_clock(P.elapsed_seconds(active)), help=f"Started {start:%H:%M}")
+                st.metric("Practising", P.fmt_clock(P.elapsed_seconds(active)), help=f"Started {start:%H:%M}")
 
             clock()
         if paused:
@@ -86,9 +82,10 @@ if active:
     song_ids = [i for i, c in cat.items() if c["kind"] == "Song"]
     picked_songs = [i for i in picked if i in song_ids]
     picked_map = [i for i in picked if i not in song_ids]
-    # what each widget started with this version (so external changes aren't read as deselections)
-    init_songs = st.session_state.setdefault(f"init_songs_{ver}", picked_songs)
-    init_map = st.session_state.setdefault(f"init_map_{ver}", picked_map)
+    # what each widget started with this version (so external changes aren't read as deselections);
+    # tied to this session so a new one doesn't inherit the last session's tags
+    init_songs = st.session_state.setdefault(f"init_songs_{active['start']}_{ver}", picked_songs)
+    init_map = st.session_state.setdefault(f"init_map_{active['start']}_{ver}", picked_map)
 
     # --- Songs: pick ones you've played before; add new ones with a song + artist field below
     sel_songs = st.multiselect(
@@ -144,6 +141,9 @@ if active:
         # picked items move into the selected lists: new widget keys so they redraw from the saved list
         st.session_state.chip_ver = ver + 1
         st.rerun()
+
+    with st.expander(":material/queue_music: What you're working on"):
+        render_current_work()
 
     # --- Metronome: loops while you play; its tempo pre-fills the bpm boxes when you end the session
     with st.expander(":material/timer_play: Metronome" + (f" · {active['bpm']} bpm" if active.get("bpm") else "")):
@@ -271,14 +271,8 @@ else:
             "and tap what you worked on. Browse the **Pathway** page for ideas.", icon=":material/lightbulb:")
 
 # --- what's in progress / getting rusty
-prog = P.in_progress()
-if prog:
-    st.subheader("In progress")
-    for r in prog[:8]:
-        sub = " · ".join(x for x in [P.ago(r["last_practiced"]),
-                                     f"{r['bpm']} bpm" if r.get("bpm") else "",
-                                     f"*{r['next_note']}*" if r.get("next_note") else ""] if x)
-        st.markdown(f"{label(r['id'])}  \n:gray[{sub}]")
+st.subheader("What you're working on")
+render_current_work()
 
 rust = P.rusty()
 if rust:

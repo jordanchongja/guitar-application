@@ -70,6 +70,10 @@ def in_progress() -> list[dict]:
     return sorted(items, key=lambda r: r["last_practiced"] or "", reverse=True)
 
 
+def wishlist() -> list[dict]:
+    return [r | {"_label": r["title"], "_kind": "Song"} for r in songs() if r["status"] == "Wishlist"]
+
+
 def rusty() -> list[dict]:
     out = []
     for r in pathway():
@@ -166,6 +170,12 @@ def add_song(title: str, artist: str = "", url: str = "", status: str = "Learnin
     store.append("songs", {"id": sid, "title": title.strip(), "artist": artist.strip(), "url": url.strip(),
                            "key": key, "capo": capo, "status": status, "added": store.now().date().isoformat()})
     return sid
+
+
+def fmt_clock(secs: int) -> str:
+    h, rem = divmod(max(secs, 0), 3600)
+    m, s = divmod(rem, 60)
+    return f"{h}:{m:02d}:{s:02d}" if h else f"{m:02d}:{s:02d}"
 
 
 def elapsed_seconds(s: dict) -> int:
