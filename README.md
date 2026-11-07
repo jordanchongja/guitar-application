@@ -98,6 +98,7 @@ modules/
   settings.py                  # Shared sidebar controls (Left-Handed Mode, Tuning)
   navigation.py                # Sidebar sections and the pages in each
   metronome.py                 # Browser metronome for the Practice page and floating panel
+  chord_analysis.py            # Written chords -> Roman numerals and their relationship to a key
 app_pages/
   Home.py                      # This month so far + links to everything
   1_Scale_Reference.py         # scales by CAGED shape or 3-notes-per-string, as notes or intervals
@@ -114,6 +115,7 @@ app_pages/
   12_Custom_Tuning_Builder.py  # build a tuning string-by-string
   13_Functional_Ear_Trainer.py # Alain Benbassat method: cadence + scale-degree ID
   14_Metronome.py              # click-track generator with tap tempo
+  15_Song_Breakdown.py         # notebook for songs worked out by ear: numerals, out-of-key chords, notes
 requirements.txt
 .streamlit/config.toml         # App theme
 ```

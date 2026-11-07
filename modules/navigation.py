@@ -12,6 +12,7 @@ SECTIONS = {
     "Practice": [
         ("app_pages/0_Practice.py", "Practice", ":material/timer:"),
         ("app_pages/0_Pathway.py", "Pathway", ":material/route:"),
+        ("app_pages/15_Song_Breakdown.py", "Song Breakdown", ":material/edit_note:"),
         ("app_pages/9_Practice_Generator.py", "Practice Generator", "🗒️"),
     ],
     "Tools": [
