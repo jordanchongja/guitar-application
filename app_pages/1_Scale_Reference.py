@@ -1,5 +1,5 @@
 """
-pages/1_Scale_Reference.py
+app_pages/1_Scale_Reference.py
 
 Task 1: Scale Reference & Fretboard Visualization.
 

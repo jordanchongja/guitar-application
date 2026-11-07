@@ -132,9 +132,9 @@ def _floating_button() -> None:
         render_metronome("panel_metronome", active.get("bpm") if active else None)
         render_current_work(active)
         with st.container(horizontal=True):
-            st.page_link("pages/0_Practice.py", label="End session" if active else "Practice page",
+            st.page_link("app_pages/0_Practice.py", label="End session" if active else "Practice page",
                          icon=":material/stop_circle:" if active else ":material/timer:")
-            st.page_link("pages/0_Pathway.py", label="Pathway", icon=":material/route:")
+            st.page_link("app_pages/0_Pathway.py", label="Pathway", icon=":material/route:")
 
 
 def render_floating_practice() -> None:

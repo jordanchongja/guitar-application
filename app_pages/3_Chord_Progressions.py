@@ -1,5 +1,5 @@
 """
-pages/3_Chord_Progressions.py
+app_pages/3_Chord_Progressions.py
 
 Task 3: Chord Progression Generator.
 

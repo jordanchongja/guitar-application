@@ -1,5 +1,5 @@
 """
-pages/8_Arpeggio_Visualizer.py
+app_pages/8_Arpeggio_Visualizer.py
 
 Phase 3: Arpeggio Visualizer.
 

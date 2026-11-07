@@ -1,5 +1,5 @@
 """
-pages/14_Metronome.py
+app_pages/14_Metronome.py
 
 A simple metronome / click-track generator. "Always use a metronome" is the
 single most consistent piece of advice across guitar practice methodology --

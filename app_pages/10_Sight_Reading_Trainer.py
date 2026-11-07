@@ -1,5 +1,5 @@
 """
-pages/10_Sight_Reading_Trainer.py
+app_pages/10_Sight_Reading_Trainer.py
 
 Additional feature: Sight-Reading Trainer.
 

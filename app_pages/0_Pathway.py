@@ -1,5 +1,5 @@
 """
-pages/0_Pathway.py
+app_pages/0_Pathway.py
 
 The map of things worth learning, by branch. Pick whatever you feel like; the map just shows where
 you are, what's ready to start, and what's getting rusty. Songs live here too.

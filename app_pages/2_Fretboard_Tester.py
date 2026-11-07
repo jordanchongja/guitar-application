@@ -1,5 +1,5 @@
 """
-pages/2_Fretboard_Tester.py
+app_pages/2_Fretboard_Tester.py
 
 Task 2: The Fretboard Tester Quiz.
 

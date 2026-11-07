@@ -34,7 +34,7 @@ BRANCH_IDS = {"Fretboard": "fb", "Scales": "sc", "Chords": "ch", "Rhythm": "rh",
 STATUSES = ["Not started", "Working on", "Comfortable", "Solid"]
 SONG_STATUSES = ["Wishlist", "Learning", "Polishing", "Learned", "Paused"]
 
-_P = "pages/"
+_P = "app_pages/"
 T_SCALES = _P + "1_Scale_Reference.py"
 T_FRET = _P + "2_Fretboard_Tester.py"
 T_PROG = _P + "3_Chord_Progressions.py"

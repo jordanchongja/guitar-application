@@ -1,5 +1,5 @@
 """
-pages/5_Quiz_Scores.py
+app_pages/5_Quiz_Scores.py
 
 Recent scores saved from the quizzes. Practice minutes live on the Practice page.
 """

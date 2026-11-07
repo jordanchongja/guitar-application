@@ -147,9 +147,24 @@ def _secret(key: str, default=None):
         return default
 
 
+def _google_login_configured() -> bool:
+    return bool(_secret("auth") and _secret("owner_email"))
+
+
+def owner_signed_in() -> bool:
+    """True when this browser is signed in with the Google account in the `owner_email` secret."""
+    if not _google_login_configured() or not st.user.is_logged_in:
+        return False
+    return (st.user.get("email_verified") is True
+            and str(st.user.get("email", "")).lower() == str(_secret("owner_email")).lower())
+
+
 def unlocked() -> bool:
     """True if this browser may log/edit. Without a Sheet (pure local use) it's open; with your
-    Sheet connected, a password is required, so the public app can't touch your data."""
+    Sheet connected, your Google sign-in or the password is required, so the public app can't touch
+    your data."""
+    if owner_signed_in():
+        return True
     pw = _secret("app_password")
     if not pw:
         return not _sheets_configured()
@@ -157,14 +172,22 @@ def unlocked() -> bool:
 
 
 def password_gate(where: str = "main") -> bool:
-    """Show a password box when locked. Returns True once unlocked."""
+    """Show the Google sign-in and password box when locked. Returns True once unlocked."""
     if unlocked():
         return True
+    box = st.sidebar if where == "sidebar" else st
+    if _google_login_configured():
+        if st.user.is_logged_in:     # signed in, but with some other account
+            box.warning(f"{st.user.get('email')} can't edit this log.", icon=":material/lock:")
+            box.button("Sign out", icon=":material/logout:", on_click=st.logout)
+        else:
+            box.button("Sign in with Google", type="primary", icon=":material/login:", on_click=st.login)
     if not _secret("app_password"):
+        if _google_login_configured():
+            return False
         st.warning("Logging is locked: add `app_password = \"...\"` to this app's secrets to use it.",
                    icon=":material/lock:")
         return False
-    box = st.sidebar if where == "sidebar" else st
     with box.form(f"pw_{where}", border=True):
         st.markdown(":material/lock: **Your practice log is private.** Enter the password to log and edit.")
         pw = st.text_input("Password", type="password")

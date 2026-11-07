@@ -1,5 +1,5 @@
 """
-pages/6_Chord_Dictionary.py
+app_pages/6_Chord_Dictionary.py
 
 Phase 2 (remaining): Chord Dictionary.
 

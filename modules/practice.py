@@ -46,6 +46,9 @@ def pathway() -> list[dict]:
         rows = seed_rows()
         store.write_all("pathway", rows)
         rows = store.read("pathway")
+    for r in rows:     # rows saved before the pages folder was renamed
+        if r["tool"].startswith("pages/"):
+            r["tool"] = "app_" + r["tool"]
     return sorted(rows, key=lambda r: (r["branch"], float(r["order"] or 0)))
 
 

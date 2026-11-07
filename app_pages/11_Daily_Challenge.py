@@ -1,5 +1,5 @@
 """
-pages/11_Daily_Challenge.py
+app_pages/11_Daily_Challenge.py
 
 Additional feature: "Daily Challenge" / "Riff of the Day".
 

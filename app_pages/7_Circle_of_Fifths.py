@@ -1,5 +1,5 @@
 """
-pages/7_Circle_of_Fifths.py
+app_pages/7_Circle_of_Fifths.py
 
 Phase 3: Interactive Circle of Fifths.
 

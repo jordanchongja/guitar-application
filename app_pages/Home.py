@@ -1,5 +1,5 @@
 """
-pages/Home.py
+app_pages/Home.py
 
 The Guitar Learning App's home page: your month so far and links to everything else.
 """
@@ -37,7 +37,7 @@ if _store.unlocked():
     with st.container(border=True):
         top = st.container(horizontal=True, vertical_alignment="center")
         top.subheader(f"Your {rc['month']}")
-        top.page_link("pages/0_Practice.py", label="Start practising", icon=":material/play_arrow:")
+        top.page_link("app_pages/0_Practice.py", label="Start practising", icon=":material/play_arrow:")
         delta = rc["minutes"] - rc["last_minutes"]
         with st.container(horizontal=True):
             st.metric("Minutes", rc["minutes"], f"{delta:+d} vs last month" if rc["last_minutes"] else None,

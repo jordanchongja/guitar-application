@@ -1,5 +1,5 @@
 """
-pages/9_Practice_Generator.py
+app_pages/9_Practice_Generator.py
 
 Phase 3: Randomized Practice Generator.
 

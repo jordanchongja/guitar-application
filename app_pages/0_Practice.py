@@ -1,5 +1,5 @@
 """
-pages/0_Practice.py
+app_pages/0_Practice.py
 
 Start a session, play whatever you feel like, tap what you touched, end it, and leave a note for
 next time. The timer survives the phone locking or the app sleeping: the start time is saved the

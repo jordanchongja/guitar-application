@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import streamlit as st
 
+from modules.practice_store import owner_signed_in
 from modules.theory import DEFAULT_TUNING_NAME, NUM_FRETS, TUNING_PRESETS
 
 CUSTOM_TUNING_LABEL = "Custom (built on Custom Tuning Builder page)"
@@ -34,6 +35,8 @@ def render_sidebar_settings(floating_practice: bool = True) -> dict:
         st.toggle("Left-Handed Mode", key="left_handed")
         st.selectbox("Tuning", options=tuning_options, key="tuning_name")
         st.slider("Frets shown", min_value=12, max_value=24, key="num_frets")
+        if owner_signed_in():
+            st.button("Sign out", icon=":material/logout:", on_click=st.logout)
         st.divider()
 
     if floating_practice:

@@ -1,11 +1,11 @@
 """
-pages/13_Functional_Ear_Trainer.py
+app_pages/13_Functional_Ear_Trainer.py
 
 Functional Ear Trainer, following the Alain Benbassat method (the approach
 behind the well-known "Functional Ear Trainer" app / tonedear.com's
 functional/solfege exercise).
 
-This is deliberately different from pages/4_Ear_Training.py: that page plays
+This is deliberately different from app_pages/4_Ear_Training.py: that page plays
 two notes and asks for the interval (the raw distance) between them. This
 page establishes a tonal center with a short I-IV-V-I cadence, then plays a
 single note, and the listener identifies that note's *scale degree* -- its

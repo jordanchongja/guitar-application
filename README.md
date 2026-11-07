@@ -37,7 +37,7 @@ usable start to finish.
   ear, application) with a concrete "done when" goal and practice tip per item, *ready to start* and
   *rusty* hints, links into the app's tools, and your songs. Edit it freely in the app.
 - Data lives in the same Google Sheet (`pathway`, `songs`, `sessions`, `session_items`,
-  `practice_state`); recordings go to a Google Drive folder. Logging and editing need `app_password`.
+  `practice_state`); recordings go to a Google Drive folder. Logging and editing need your Google sign-in or `app_password`.
   `tools/export_practice.py` dumps everything as JSON (used to mirror practice into Obsidian).
 
 ## What's in it
@@ -68,10 +68,10 @@ upfront about, not as a pitch for anything.
 
 ## Functional Ear Trainer
 
-`pages/13_Functional_Ear_Trainer.py` follows the Alain Benbassat method (the
+`app_pages/13_Functional_Ear_Trainer.py` follows the Alain Benbassat method (the
 approach behind the well-known "Functional Ear Trainer" app and
 tonedear.com's functional/solfege exercise) — different from
-`pages/4_Ear_Training.py`, which drills the raw distance between two notes.
+`app_pages/4_Ear_Training.py`, which drills the raw distance between two notes.
 Here, a short I-IV-V-I cadence establishes a key, then a single note plays;
 you identify that note's *scale degree* — its function within the key — via
 movable-do solfege, at three levels (Simple: 1/3/5, Diatonic: 1-7,
@@ -98,7 +98,7 @@ modules/
   settings.py                  # Shared sidebar controls (Left-Handed Mode, Tuning)
   navigation.py                # Sidebar sections and the pages in each
   metronome.py                 # Browser metronome for the Practice page and floating panel
-pages/
+app_pages/
   Home.py                      # This month so far + links to everything
   1_Scale_Reference.py         # scales by CAGED shape or 3-notes-per-string, as notes or intervals
   2_Fretboard_Tester.py        # note-finding quiz
@@ -118,6 +118,18 @@ requirements.txt
 .streamlit/config.toml         # App theme
 ```
 
+### Sign in with Google
+
+Unlocks logging for one Google account, remembered for 30 days per browser. The password keeps
+working alongside it.
+
+1. In [Google Cloud Console](https://console.cloud.google.com/), under **Google Auth Platform**,
+   configure the consent screen: audience **External**, and add your Gmail address as a test user.
+2. Under **Clients**, create a **Web application** client with the authorized redirect URI
+   `https://guitar-application.streamlit.app/oauth2callback`.
+3. Paste `owner_email` and the `[auth]` section from `.streamlit/secrets.toml.example` into the
+   app's secrets, using the client's ID and secret. `cookie_secret` is any long random string.
+
 ### Setup
 
 ```powershell
@@ -132,8 +144,7 @@ pip install -r requirements.txt
 streamlit run main.py
 ```
 
-Streamlit auto-discovers the `pages/` directory and builds the sidebar
-navigation for you. With no extra setup, practice logs and quiz scores are
+The sidebar is built from `modules/navigation.py`. With no extra setup, practice logs and quiz scores are
 stored in a local SQLite file (`guitar_app.db`, created automatically on
 first run) — fine for local use, but see below before deploying.
 

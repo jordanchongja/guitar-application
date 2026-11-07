@@ -9,7 +9,7 @@ import streamlit as st
 from modules.navigation import SECTIONS
 
 st.navigation(
-    {section: [st.Page(path, title=title, icon=icon, default=path == "pages/Home.py")
+    {section: [st.Page(path, title=title, icon=icon, default=path == "app_pages/Home.py")
                for path, title, icon in pages]
      for section, pages in SECTIONS.items()},
     expanded=True,

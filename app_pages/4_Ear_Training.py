@@ -1,5 +1,5 @@
 """
-pages/4_Ear_Training.py
+app_pages/4_Ear_Training.py
 
 Task 4: Ear Training (Intervals).
 
