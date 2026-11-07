@@ -129,6 +129,8 @@ if branch == "Songs":
                     st.markdown(f":material/trending_up: **Tempo** {' → '.join(str(b) for _, b in tempo)} bpm")
                 if s["url"]:
                     st.markdown(f"[Open tab]({s['url']})")
+                st.page_link("app_pages/15_Song_Breakdown.py", label="Break it down", icon=":material/edit_note:",
+                             query_params={"song": s["id"]})
     st.stop()
 
 # ---------------------------------------------------------------- a branch

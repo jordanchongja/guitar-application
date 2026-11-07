@@ -43,10 +43,11 @@ usable start to finish.
 ## What's in it
 
 - **Reference** — scale/CAGED/3-notes-per-string fretboard views, a chord
-  dictionary that names whatever notes you click, circle of fifths, an
+  dictionary that names whatever notes you click or drag across the neck, a
+  chord finder that shows how to play any chord, circle of fifths, an
   arpeggio + extended-chord (9/11/13) visualizer, a chord progression
   generator, a custom tuning builder
-- **Quizzes** — a fretboard note-finding quiz, interval ear training, a
+- **Quizzes** — a fretboard note-finding quiz, an interval shape quiz, interval ear training, a
   [Functional Ear Trainer](#functional-ear-trainer) (scale-degree
   recognition, not raw interval distance), sight-reading
 - **Practice tools** — a randomized practice-routine generator, a daily
@@ -98,6 +99,9 @@ modules/
   settings.py                  # Shared sidebar controls (Left-Handed Mode, Tuning)
   navigation.py                # Sidebar sections and the pages in each
   metronome.py                 # Browser metronome for the Practice page and floating panel
+  chord_analysis.py            # Written chords -> Roman numerals and their relationship to a key
+  chord_shapes.py              # Works out playable voicings and fingerings for any chord and tuning
+  fret_picker.py               # Drag-to-select fretboard used by the Chord Dictionary
 app_pages/
   Home.py                      # This month so far + links to everything
   1_Scale_Reference.py         # scales by CAGED shape or 3-notes-per-string, as notes or intervals
@@ -105,7 +109,7 @@ app_pages/
   3_Chord_Progressions.py      # diatonic chords + progression generator
   4_Ear_Training.py            # interval ear training
   5_Quiz_Scores.py             # recent quiz scores
-  6_Chord_Dictionary.py        # click frets, app names the chord
+  6_Chord_Dictionary.py        # click or drag frets, app names the chord
   7_Circle_of_Fifths.py        # interactive circle of fifths
   8_Arpeggio_Visualizer.py     # arpeggio + extended chord shapes on the neck
   9_Practice_Generator.py      # randomized timed practice routine
@@ -114,6 +118,9 @@ app_pages/
   12_Custom_Tuning_Builder.py  # build a tuning string-by-string
   13_Functional_Ear_Trainer.py # Alain Benbassat method: cadence + scale-degree ID
   14_Metronome.py              # click-track generator with tap tempo
+  15_Song_Breakdown.py         # notebook for songs worked out by ear: numerals, out-of-key chords, notes
+  16_Interval_Tester.py        # interval shapes on the neck: name them or find them
+  17_Chord_Finder.py           # pick a root and chord type, get playable shapes with fingering
 requirements.txt
 .streamlit/config.toml         # App theme
 ```

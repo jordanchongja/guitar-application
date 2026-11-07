@@ -12,11 +12,13 @@ SECTIONS = {
     "Practice": [
         ("app_pages/0_Practice.py", "Practice", ":material/timer:"),
         ("app_pages/0_Pathway.py", "Pathway", ":material/route:"),
+        ("app_pages/15_Song_Breakdown.py", "Song Breakdown", ":material/edit_note:"),
         ("app_pages/9_Practice_Generator.py", "Practice Generator", "🗒️"),
     ],
     "Tools": [
         ("app_pages/1_Scale_Reference.py", "Scale Reference", "🎼"),
         ("app_pages/6_Chord_Dictionary.py", "Chord Dictionary", "📖"),
+        ("app_pages/17_Chord_Finder.py", "Chord Finder", "🔍"),
         ("app_pages/3_Chord_Progressions.py", "Chord Progressions", "🎶"),
         ("app_pages/8_Arpeggio_Visualizer.py", "Arpeggio Visualizer", "🎹"),
         ("app_pages/7_Circle_of_Fifths.py", "Circle of Fifths", "🎡"),
@@ -25,6 +27,7 @@ SECTIONS = {
     ],
     "Quizzes": [
         ("app_pages/2_Fretboard_Tester.py", "Fretboard Tester", "🎯"),
+        ("app_pages/16_Interval_Tester.py", "Interval Tester", "📐"),
         ("app_pages/4_Ear_Training.py", "Ear Training (Intervals)", "👂"),
         ("app_pages/13_Functional_Ear_Trainer.py", "Functional Ear Trainer", "🎯"),
         ("app_pages/10_Sight_Reading_Trainer.py", "Sight-Reading Trainer", "🎼"),

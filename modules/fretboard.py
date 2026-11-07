@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import plotly.graph_objects as go
 
-from modules.theory import note_at_fret
+from modules.theory import note_at_fret, note_index
 
 SINGLE_DOT_FRETS = {3, 5, 7, 9, 15, 17, 19, 21}
 DOUBLE_DOT_FRETS = {12}
@@ -249,6 +249,68 @@ def draw_clickable_fretboard(
         )
     )
     return base_fig
+
+
+def chord_diagram_svg(tuning: list[str], voicing: dict, root: str, left_handed: bool = False) -> str:
+    """
+    A chord box as inline SVG: nut at the top, low string on the left (flipped for left-handed
+    players), finger numbers in the dots and the note names underneath. `voicing` comes from
+    `modules.chord_shapes.find_voicings`.
+    """
+    frets = voicing["frets"]
+    num_strings = len(frets)
+    gap, row, left, top, rows = 34, 36, 54, 34, 5
+    played = [fret for fret in frets if fret]
+    start = 1 if not played or max(played) <= rows else min(played)
+    width = left + gap * (num_strings - 1) + 24
+    height = top + row * rows + 30
+
+    def string_x(i: int) -> float:
+        return left + gap * (num_strings - 1 - i if left_handed else i)
+
+    def fret_y(fret: int) -> float:
+        return top + (fret - start + 0.5) * row
+
+    parts = [f'<rect x="{left}" y="{top}" width="{gap * (num_strings - 1)}" height="{row * rows}" fill="{NECK_COLOR}"/>']
+    for line in range(rows + 1):
+        y = top + line * row
+        thick = line == 0 and start == 1
+        parts.append(f'<line x1="{left}" y1="{y}" x2="{left + gap * (num_strings - 1)}" y2="{y}" '
+                     f'stroke="{NUT_COLOR if thick else FRET_LINE_COLOR}" stroke-width="{6 if thick else 1.5}"/>')
+    for i in range(num_strings):
+        x = string_x(i)
+        parts.append(f'<line x1="{x}" y1="{top}" x2="{x}" y2="{top + row * rows}" stroke="{STRING_COLOR}" '
+                     f'stroke-width="{1 + (num_strings - 1 - i) * 0.35}"/>')
+    if start > 1:
+        parts.append(f'<text x="{left - 17}" y="{fret_y(start) + 5}" text-anchor="end" font-size="14" '
+                     f'fill="{NUT_COLOR}">{start}fr</text>')
+
+    barre = voicing["barre"]
+    if barre:
+        ends = sorted((string_x(barre["first"]), string_x(barre["last"])))
+        y = fret_y(barre["fret"])
+        parts.append(f'<rect x="{ends[0] - 13}" y="{y - 13}" width="{ends[1] - ends[0] + 26}" height="26" rx="13" '
+                     f'fill="{NOTE_COLOR}"/>')
+
+    root_index = note_index(root)
+    for i, fret in enumerate(frets):
+        x = string_x(i)
+        if fret is None or fret == 0:
+            mark = "×" if fret is None else "○"
+            parts.append(f'<text x="{x}" y="{top - 10}" text-anchor="middle" font-size="16" fill="{NUT_COLOR}">{mark}</text>')
+        name = "" if fret is None else note_at_fret(tuning[i], fret)
+        parts.append(f'<text x="{x}" y="{height - 6}" text-anchor="middle" font-size="13" fill="{NUT_COLOR}">{name}</text>')
+        if fret:
+            fill = ROOT_COLOR if note_index(name) == root_index else NOTE_COLOR
+            y = fret_y(fret)
+            parts.append(f'<circle cx="{x}" cy="{y}" r="13" fill="{fill}" stroke="white" stroke-width="1.5"/>')
+            parts.append(f'<text x="{x}" y="{y + 5}" text-anchor="middle" font-size="14" font-weight="600" '
+                         f'fill="white">{voicing["fingers"][i]}</text>')
+
+    summary = " ".join("x" if fret is None else str(fret) for fret in frets)
+    return (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" role="img" '
+            f'aria-label="Chord diagram, low string to high: {summary}" '
+            f'style="display:block;width:100%;max-width:{width}px;height:auto">{"".join(parts)}</svg>')
 
 
 def build_scale_highlights(tuning: list[str], num_frets: int, scale_notes: list[str], root_note: str,

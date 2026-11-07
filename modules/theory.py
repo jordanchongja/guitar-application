@@ -120,6 +120,18 @@ CHORD_INTERVALS = {
     "dom7": [0, 4, 7, 10],
     "dim7": [0, 3, 6, 9],
     "m7b5": [0, 3, 6, 10],
+    "5": [0, 7],
+    "sus2": [0, 2, 7],
+    "sus4": [0, 5, 7],
+    "7sus4": [0, 5, 7, 10],
+    "6": [0, 4, 7, 9],
+    "m6": [0, 3, 7, 9],
+    "add9": [0, 4, 7, 14],
+    "madd9": [0, 3, 7, 14],
+    "mmaj7": [0, 3, 7, 11],
+    "9": [0, 4, 7, 10, 14],
+    "maj9": [0, 4, 7, 11, 14],
+    "m9": [0, 3, 7, 10, 14],
 }
 
 QUALITY_SUFFIX = {
@@ -132,6 +144,18 @@ QUALITY_SUFFIX = {
     "dom7": "7",
     "dim7": "dim7",
     "m7b5": "m7b5",
+    "5": "5",
+    "sus2": "sus2",
+    "sus4": "sus4",
+    "7sus4": "7sus4",
+    "6": "6",
+    "m6": "m6",
+    "add9": "add9",
+    "madd9": "madd9",
+    "mmaj7": "mMaj7",
+    "9": "9",
+    "maj9": "maj9",
+    "m9": "m9",
 }
 
 
@@ -309,6 +333,70 @@ def interval_label(root: str, note: str) -> str:
     return INTERVAL_LABELS[(note_index(note) - note_index(root)) % 12]
 
 
+# ---------------------------------------------------------------------------
+# Interval shapes on the neck (for the Interval Tester)
+# ---------------------------------------------------------------------------
+
+
+def string_pitches(tuning: list[str]) -> list[int]:
+    """Semitones above the lowest string for each open string, low to high. Each string is taken
+    to be within an octave above the one before it, which holds for every preset tuning."""
+    pitches = [0]
+    for lower, higher in zip(tuning, tuning[1:]):
+        pitches.append(pitches[-1] + (note_index(higher) - note_index(lower)) % 12)
+    return pitches
+
+
+def interval_positions(tuning: list[str], root_string: int, root_fret: int, semitones: int,
+                       max_fret: int) -> list[tuple[int, int]]:
+    """Every (string, fret) up to `max_fret` that sounds `semitones` above the root."""
+    pitches = string_pitches(tuning)
+    num_strings = len(tuning)
+    target = pitches[num_strings - root_string] + root_fret + semitones
+    positions = []
+    for i, pitch in enumerate(pitches):
+        fret = target - pitch
+        if 0 <= fret <= max_fret:
+            positions.append((num_strings - i, fret))
+    return positions
+
+
+def shape_shift(tuning: list[str], string_a: int, string_b: int) -> int:
+    """How many frets higher a shape between two strings sits than it would if every string pair
+    were a 4th apart. It's 1 for any pair crossing G-B in standard tuning."""
+    pitches = string_pitches(tuning)
+    num_strings = len(tuning)
+    lower, higher = sorted((num_strings - string_a, num_strings - string_b))
+    return 5 * (higher - lower) - (pitches[higher] - pitches[lower])
+
+
+def make_interval_question(tuning: list[str], semitone_options: list[int], root_strings: list[int], max_fret: int,
+                           max_gap: int, rng: random.Random | None = None) -> dict | None:
+    """Pick an interval, a fretted root and a note on the same or a thinner string, at most
+    `max_gap` strings away. Returns None if the options leave nothing to ask."""
+    rng = rng or random
+    for semitones in rng.sample(semitone_options, k=len(semitone_options)):
+        pairs = []
+        for root_string in root_strings:
+            for root_fret in range(1, max_fret + 1):
+                for string_number, fret in interval_positions(tuning, root_string, root_fret, semitones, max_fret):
+                    if 0 <= root_string - string_number <= max_gap:
+                        pairs.append(((root_string, root_fret), (string_number, fret)))
+        if pairs:
+            root, target = rng.choice(pairs)
+            return {"semitones": semitones, "root": root, "target": target}
+    return None
+
+
+def interval_choices(semitones: int, rng: random.Random | None = None) -> list[int]:
+    """The answer plus three of the nearest intervals, since those are the ones to confuse."""
+    rng = rng or random
+    nearby = sorted((s for s in range(1, 13) if s != semitones), key=lambda s: abs(s - semitones))
+    choices = rng.sample(nearby[:5], k=3) + [semitones]
+    rng.shuffle(choices)
+    return choices
+
+
 def get_caged_shape(key: str, scale_type: str, shape: str) -> dict[tuple[int, int], str]:
     """{(string_number, fret): note} for one CAGED box, placed as low on the neck as it fits."""
     parent = transpose(key, 3) if "Minor" in scale_type else key
@@ -449,6 +537,18 @@ CHORD_QUALITY_LABELS = {
     "dom7": "Dominant 7th",
     "dim7": "Diminished 7th",
     "m7b5": "Half-Diminished (m7b5)",
+    "5": "Power Chord",
+    "sus2": "Suspended 2nd",
+    "sus4": "Suspended 4th",
+    "7sus4": "Dominant 7th Suspended 4th",
+    "6": "Major 6th",
+    "m6": "Minor 6th",
+    "add9": "Major Add 9",
+    "madd9": "Minor Add 9",
+    "mmaj7": "Minor Major 7th",
+    "9": "Dominant 9th",
+    "maj9": "Major 9th",
+    "m9": "Minor 9th",
 }
 
 
@@ -456,27 +556,30 @@ def identify_chord(note_names: set[str], prefer_flat: bool = False) -> list[dict
     """
     Given a set of note names (any octave/order, duplicates ignored), return
     every root/quality combination whose interval formula produces exactly
-    that set of pitch classes. Empty list means no standard chord matches.
+    that set of pitch classes. If none does, chords of four or more notes that
+    match once their perfect 5th is left out, which guitar voicings often do.
+    Empty list means no standard chord matches.
     """
     if len(note_names) < 2:
         return []
 
     given = {note_index(n) for n in note_names}
-    matches = []
+    matches, without_fifth = [], []
     for root_idx in range(12):
+        root_name = NOTES_FLAT[root_idx] if prefer_flat else NOTES_SHARP[root_idx]
         for quality, intervals in CHORD_INTERVALS.items():
+            match = {
+                "root": root_name,
+                "quality": quality,
+                "label": CHORD_QUALITY_LABELS[quality],
+                "symbol": root_name + QUALITY_SUFFIX.get(quality, f"({quality})"),
+            }
             expected = {(root_idx + i) % 12 for i in intervals}
             if expected == given:
-                root_name = NOTES_FLAT[root_idx] if prefer_flat else NOTES_SHARP[root_idx]
-                matches.append(
-                    {
-                        "root": root_name,
-                        "quality": quality,
-                        "label": CHORD_QUALITY_LABELS[quality],
-                        "symbol": root_name + QUALITY_SUFFIX.get(quality, f"({quality})"),
-                    }
-                )
-    return matches
+                matches.append(match)
+            elif len(intervals) >= 4 and 7 in intervals and expected - {(root_idx + 7) % 12} == given:
+                without_fifth.append({**match, "label": f"{match['label']}, no 5th"})
+    return matches or without_fifth
 
 
 # ---------------------------------------------------------------------------

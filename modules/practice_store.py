@@ -27,6 +27,7 @@ TABLES: dict[str, list[str]] = {
     "sessions": ["id", "start", "end", "minutes", "items", "notes", "recording"],
     "session_items": ["session_id", "date", "item_id", "item", "status", "note", "bpm"],
     "practice_state": ["key", "value"],
+    "breakdowns": ["id", "song_id", "order", "section", "key", "chords", "notes"],
 }
 
 LOCAL_PATH = Path(__file__).resolve().parent.parent / "practice_data.json"

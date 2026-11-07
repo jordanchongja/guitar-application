@@ -181,6 +181,25 @@ def fmt_clock(secs: int) -> str:
     return f"{h}:{m:02d}:{s:02d}" if h else f"{m:02d}:{s:02d}"
 
 
+def breakdown_sections(song_id: str) -> list[dict]:
+    rows = [r for r in store.read("breakdowns") if r["song_id"] == song_id]
+    return sorted(rows, key=lambda r: float(r["order"] or 0))
+
+
+def save_breakdown_section(row: dict) -> None:
+    """Add a section (empty id) or replace the one with the same id."""
+    rows = store.read("breakdowns")
+    if row["id"]:
+        store.write_all("breakdowns", [row | {"order": r["order"]} if r["id"] == row["id"] else r for r in rows])
+    else:
+        store.append("breakdowns", row | {"id": f"bd{store.now():%y%m%d%H%M%S}",
+                                          "order": len(breakdown_sections(row["song_id"]))})
+
+
+def delete_breakdown_section(section_id: str) -> None:
+    store.write_all("breakdowns", [r for r in store.read("breakdowns") if r["id"] != section_id])
+
+
 def elapsed_seconds(s: dict) -> int:
     """Seconds actually practised in the running session (paused time excluded)."""
     now = store.now()

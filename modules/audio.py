@@ -94,6 +94,16 @@ def _chord_wave(root_semitones: int, intervals: tuple[int, ...], duration: float
     return wave_data
 
 
+def generate_chord_sequence_wav(chords: tuple[tuple[int, tuple[int, ...]], ...], chord_duration: float = 1.6) -> bytes:
+    """Play chords one after another, each given as (semitones above C, tones above its root), with
+    the root doubled an octave down so the movement is easy to follow."""
+    segments = []
+    for root, tones in chords:
+        root_from_a4 = (root - 9) % 12 - 12     # roots between A3 and G#4
+        segments.append(_chord_wave(root_from_a4, tuple(tones) + (-12,), chord_duration))
+    return samples_to_wav_bytes(np.concatenate(segments))
+
+
 def generate_cadence_and_tone_wav(
     key_root_semitones: int,
     target_offset: int,
