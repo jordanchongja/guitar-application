@@ -27,17 +27,23 @@ usable start to finish.
 
 ## Practice tracker (Practice + Pathway pages)
 
-- **Practice:** press Start, play whatever you feel like, tap what you touched, then End and leave a
-  one-line *next time* note per item (and optionally record a take). The timer survives your phone
+- **Today's page:** pick one small thing you can finish and what "done" means, press Start, then
+  record a take and finish it, which saves the session too. Unfinished pages wait for next time. Free play still works: press
+  Start, tap what you touched, then End and leave a one-line *next time* note per item. The timer survives your phone
   locking: the start time is saved, elapsed time is computed from it. The page opens with *Last time*,
   what's in progress and what's getting rusty, so coming back after a break is easy.
+- **Sketchbook:** every page you've finished by month, with its take, and your first and latest takes
+  together. Takes open from the Google Drive folder.
+- **Ideas:** save anything you hear from the Ideas box on Practice, or from a Google Form while the app
+  is asleep. Link the form's responses to this app's Sheet: the app reads the `Form Responses` tab (or
+  one named `ideas_inbox`) and offers those ideas when you pick a page.
 - **Floating Practice button:** the corner button on every other page shows what you're working on, and
   starts, pauses and tags a session and runs the metronome without leaving the page. Saving a session happens on Practice.
 - **Pathway:** a map of what's worth learning (fretboard, scales, chords, rhythm, technique, theory &
   ear, application) with a concrete "done when" goal and practice tip per item, *ready to start* and
   *rusty* hints, links into the app's tools, and your songs. Edit it freely in the app.
 - Data lives in the same Google Sheet (`pathway`, `songs`, `sessions`, `session_items`,
-  `practice_state`); recordings go to a Google Drive folder. Logging and editing need your Google sign-in or `app_password`.
+  `practice_state`, `pages`, `ideas`); recordings go to a Google Drive folder. Logging and editing need your Google sign-in or `app_password`.
   `tools/export_practice.py` dumps everything as JSON (used to mirror practice into Obsidian).
 
 ## What's in it

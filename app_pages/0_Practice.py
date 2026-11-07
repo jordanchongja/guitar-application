@@ -1,8 +1,8 @@
 """
 app_pages/0_Practice.py
 
-Start a session, play whatever you feel like, tap what you touched, end it, and leave a note for
-next time. The timer survives the phone locking or the app sleeping: the start time is saved the
+Pick one small page to finish, start a session, finish the page and keep the take. Free play works
+too: tap what you touched, end it, and leave a note for next time. The timer survives the phone locking or the app sleeping: the start time is saved the
 moment you press Start and elapsed time is always computed from it.
 """
 
@@ -17,6 +17,7 @@ from modules.metronome import render_metronome
 from modules.pathway_seed import BRANCH_ICONS, SONG_STATUSES, STATUSES
 from modules.practice_panel import render_current_work
 from modules.settings import render_sidebar_settings
+from modules.today_page import commit_typed, render_ideas, render_plan, render_session, render_unsaved_take
 
 st.set_page_config(page_title="Practice", page_icon=":material/timer:", layout="centered")
 render_sidebar_settings(floating_practice=False)
@@ -67,6 +68,8 @@ if active:
             P.pause_session()
             st.rerun()
 
+    render_session(active)
+
     # What you practised, in your own words: the main log. Saved as you go (when you tap away
     # from the box), so it survives the phone sleeping just like the timer.
     st.text_area(
@@ -89,50 +92,54 @@ if active:
     init_songs = st.session_state.setdefault(f"init_songs_{active['start']}_{ver}", picked_songs)
     init_map = st.session_state.setdefault(f"init_map_{active['start']}_{ver}", picked_map)
 
-    # --- Songs: pick ones you've played before; add new ones with a song + artist field below
-    sel_songs = st.multiselect(
-        "Songs", song_ids, default=[i for i in init_songs if i in song_ids], format_func=lambda i: cat[i]["label"],
-        key=f"songs_{ver}", placeholder="Pick a song you've played before…" if song_ids else "No songs yet: add one below")
-    new_song_ids = list(sel_songs)
+    # With a page set, the page is the session: tagging anything else stays out of the way
+    page_now = P.next_page()
+    tag_area = st.expander(":material/sell: Tag what else you played") if page_now else st.container()
+    with tag_area:
+        # --- Songs: pick ones you've played before; add new ones with a song + artist field below
+        sel_songs = st.multiselect(
+            "Songs", song_ids, default=[i for i in init_songs if i in song_ids], format_func=lambda i: cat[i]["label"],
+            key=f"songs_{ver}", placeholder="Pick a song you've played before…" if song_ids else "No songs yet: add one below")
+        new_song_ids = list(sel_songs)
 
-    with st.form(f"new_song_{ver}", border=False):     # new keys after each add -> empty boxes
-        c1, c2, c3 = st.columns([5, 4, 2], vertical_alignment="bottom")
-        new_title = c1.text_input("New song", placeholder="Song (or paste an Ultimate Guitar link)",
-                                  key=f"new_title_{ver}")
-        new_artist = c2.text_input("Artist", placeholder="Artist", key=f"new_artist_{ver}")
-        if c3.form_submit_button("Add", icon=":material/add:", width="stretch") and new_title.strip():
-            is_link = "ultimate-guitar.com" in new_title
-            title, artist = P.parse_song_link(new_title) if is_link else (new_title.strip(), "")
-            sid = P.add_song(title or new_title.strip(), new_artist.strip() or artist,
-                             new_title.strip() if is_link else "")
-            P.set_active_items(list(dict.fromkeys(picked + [sid])))
-            st.session_state.chip_ver = ver + 1
-            st.rerun()
+        with st.form(f"new_song_{ver}", border=False):     # new keys after each add -> empty boxes
+            c1, c2, c3 = st.columns([5, 4, 2], vertical_alignment="bottom")
+            new_title = c1.text_input("New song", placeholder="Song (or paste an Ultimate Guitar link)",
+                                      key=f"new_title_{ver}")
+            new_artist = c2.text_input("Artist", placeholder="Artist", key=f"new_artist_{ver}")
+            if c3.form_submit_button("Add", icon=":material/add:", width="stretch") and new_title.strip():
+                is_link = "ultimate-guitar.com" in new_title
+                title, artist = P.parse_song_link(new_title) if is_link else (new_title.strip(), "")
+                sid = P.add_song(title or new_title.strip(), new_artist.strip() or artist,
+                                 new_title.strip() if is_link else "")
+                P.set_active_items(list(dict.fromkeys(picked + [sid])))
+                st.session_state.chip_ver = ver + 1
+                st.rerun()
 
-    # --- Map items: optional tags (give per-item "next time" notes, tempo history, rusty tracking)
-    st.markdown("**Tag skills from your map** :gray[(optional)]")
-    quick = [r["id"] for r in P.in_progress() if r["id"] not in song_ids][:10]
-    if len(quick) < 4:   # fresh map: suggest the first ready-to-start item in each branch
-        rows = P.pathway()
-        ready = P.ready_to_start(rows)
-        firsts = {}
-        for r in rows:
-            if r["id"] in ready and r["branch"] not in firsts:
-                firsts[r["branch"]] = r["id"]
-        quick += [i for i in firsts.values() if i not in quick]
-    top = list(dict.fromkeys(init_map + picked_map + quick))
-    sel_top = st.pills("Suggestions", top, selection_mode="multi", default=init_map, format_func=label,
-                       key=f"chips_top_{ver}", label_visibility="collapsed")
-    area = st.segmented_control("Browse an area", list(BRANCH_ICONS), key="browse_area",
-                                format_func=lambda b: f"{BRANCH_ICONS[b]} {b}")
-    sel_area = []
-    if area:
-        in_area = [i for i, c in cat.items() if c["kind"] == area and i not in top]
-        if in_area:
-            sel_area = st.pills("In this area", in_area, selection_mode="multi", format_func=label,
-                                key=f"chips_{area}_{ver}", label_visibility="collapsed")
-        else:
-            st.caption("Nothing else here yet.")
+        # --- Map items: optional tags (give per-item "next time" notes, tempo history, rusty tracking)
+        st.markdown("**Tag skills from your map** :gray[(optional)]")
+        quick = [r["id"] for r in P.in_progress() if r["id"] not in song_ids][:10]
+        if len(quick) < 4:   # fresh map: suggest the first ready-to-start item in each branch
+            rows = P.pathway()
+            ready = P.ready_to_start(rows)
+            firsts = {}
+            for r in rows:
+                if r["id"] in ready and r["branch"] not in firsts:
+                    firsts[r["branch"]] = r["id"]
+            quick += [i for i in firsts.values() if i not in quick]
+        top = list(dict.fromkeys(init_map + picked_map + quick))
+        sel_top = st.pills("Suggestions", top, selection_mode="multi", default=init_map, format_func=label,
+                           key=f"chips_top_{ver}", label_visibility="collapsed")
+        area = st.segmented_control("Browse an area", list(BRANCH_ICONS), key="browse_area",
+                                    format_func=lambda b: f"{BRANCH_ICONS[b]} {b}")
+        sel_area = []
+        if area:
+            in_area = [i for i, c in cat.items() if c["kind"] == area and i not in top]
+            if in_area:
+                sel_area = st.pills("In this area", in_area, selection_mode="multi", format_func=label,
+                                    key=f"chips_{area}_{ver}", label_visibility="collapsed")
+            else:
+                st.caption("Nothing else here yet.")
 
     # apply only what changed on this page, so edits from another tab/device aren't overwritten
     removed = (set(init_songs) - set(new_song_ids)) | (set(init_map) - set(sel_top or []))
@@ -153,6 +160,8 @@ if active:
         st.caption("Keeps clicking when you change page. Accented click on beat 1.")
 
     for i in chosen:
+        if page_now and i == page_now.get("item_id"):   # already on the page card
+            continue
         row = cat[i]["row"]
         bits = []
         if row.get("next_note"):
@@ -199,7 +208,11 @@ if active:
             notes = st.text_area("What you practised",
                                  value=st.session_state.get("session_notes", active.get("notes", "")),
                                  height=100)
-            take = st.audio_input("Record a take (optional)")
+            # the page card has its own recorder; a page you don't finish waits for next time
+            page_open = P.next_page() is not None
+            take = None if page_open else st.audio_input("Record a take (optional)")
+            if page_open:
+                st.caption("Your page isn't finished yet, so it'll be waiting for you next time.")
             col_a, col_b = st.columns(2)
             save = col_a.form_submit_button("Save session", type="primary", icon=":material/check:",
                                             width="stretch")
@@ -226,27 +239,27 @@ if active:
 
 
 # ============================================================================ not practising
-if st.session_state.get("unsaved_take"):
-    t = st.session_state.unsaved_take
-    with st.container(border=True):
-        st.warning(f"Your session was saved, but the recording couldn't be uploaded: {t['error']}",
-                   icon=":material/mic_off:")
-        c1, c2 = st.columns(2)
-        c1.download_button("Download the take", t["data"], t["name"], "audio/wav",
-                           icon=":material/download:", width="stretch")
-        if c2.button("Dismiss", width="stretch"):
-            del st.session_state.unsaved_take
-            st.rerun()
+render_unsaved_take()
+render_plan()
 
 if st.button("Start practising", type="primary", icon=":material/play_arrow:", width="stretch"):
+    commit_typed()
+    st.session_state.pop("just_finished", None)
     P.start_session()
     st.rerun()
+
+render_ideas()
 
 with st.expander(":material/timer_play: Metronome"):
     render_metronome("practice_metronome")
 
 sess = P.sessions()
 items = P.session_items()
+
+pages_done = len(P.finished_pages())
+if pages_done:
+    st.page_link("app_pages/18_Sketchbook.py", label=f"Sketchbook · {pages_done} page{'' if pages_done == 1 else 's'}",
+                 icon=":material/auto_stories:")
 
 # --- where you left off
 if sess:
@@ -264,8 +277,8 @@ if sess:
             st.markdown(f":material/mic: [Your last recording]({last['recording']})"
                         if last["recording"].startswith("http") else f":material/mic: {last['recording']}")
 else:
-    st.info("No sessions yet. Press **Start practising**, play whatever you feel like, "
-            "and tap what you worked on. Browse the **Pathway** page for ideas.", icon=":material/lightbulb:")
+    st.info("No sessions yet. Pick one small thing to finish, press **Start practising**, and keep the take. "
+            "Browse the **Pathway** page for ideas.", icon=":material/lightbulb:")
 
 # --- what's in progress / getting rusty
 st.subheader("What you're working on")
@@ -298,10 +311,6 @@ if sess:
         df = pd.DataFrame({"Area": list(split), "Minutes": list(split.values())}).sort_values("Minutes")
         st.markdown("**Minutes by area, last 30 days**")
         st.bar_chart(df, x="Area", y="Minutes", horizontal=True, height=220)
-        untouched = [b for b in BRANCH_ICONS if b not in split]
-        if untouched:
-            st.caption("Not touched in 30 days: " + ", ".join(untouched)
-                       + ". Mixing a couple of areas per session tends to help things stick.")
 
 with st.expander("Forgot to start the timer? Log a past session"):
     with st.form("past"):
