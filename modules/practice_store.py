@@ -2,7 +2,7 @@
 modules/practice_store.py
 
 Storage for the practice tracker (Practice + Pathway pages): the pathway map, songs, sessions,
-the running session, and recordings.
+the running session, recordings, and the pages and ideas behind today's page.
 
 Same idea as modules/database.py: Google Sheets when secrets are configured (hosted app),
 a local JSON file otherwise. Each table is one worksheet. The tables are small, so edits
@@ -28,6 +28,8 @@ TABLES: dict[str, list[str]] = {
     "session_items": ["session_id", "date", "item_id", "item", "status", "note", "bpm"],
     "practice_state": ["key", "value"],
     "breakdowns": ["id", "song_id", "order", "section", "key", "chords", "notes"],
+    "pages": ["id", "finished", "title", "done_when", "take", "session_id", "item_id"],
+    "ideas": ["id", "text", "added", "status", "source"],
 }
 
 LOCAL_PATH = Path(__file__).resolve().parent.parent / "practice_data.json"
@@ -67,6 +69,26 @@ def _sheet_rows(name: str) -> list[dict]:
             if any(c.strip() for c in row)]
 
 
+@st.cache_data(ttl=60, show_spinner=False)
+def form_responses() -> list[tuple[str, str]]:
+    """(raw timestamp, text) for each answer to the ideas Google Form, whose linked tab lives in this
+    Sheet. The form is how ideas get in while the app is asleep. Empty when there's no such tab."""
+    if not _sheets_configured():
+        return []
+    tabs = _get_spreadsheet().worksheets()
+    tab = next((w for w in tabs if w.title == "ideas_inbox" or w.title.lower().startswith("form responses")), None)
+    if tab is None:
+        return []
+    # unformatted: the timestamp arrives as a serial number, not a string in the Sheet's locale
+    rows = tab.get_all_values(value_render_option="UNFORMATTED_VALUE")[1:]
+    out = []
+    for row in rows:
+        text = " · ".join(str(c).strip() for c in row[1:] if str(c).strip())
+        if row and text:
+            out.append((str(row[0]), text))
+    return out
+
+
 # ----------------------------------------------------------------------------- local JSON
 def _local() -> dict:
     if LOCAL_PATH.exists():
@@ -93,7 +115,7 @@ def write_all(name: str, rows: list[dict]) -> None:
         ws = _ws(name)
         ws.clear()
         ws.update(values=[cols] + [[r[c] for c in cols] for r in clean], range_name="A1")
-        _sheet_rows.clear()
+        _sheet_rows.clear(name)
     else:
         data = _local()
         data[name] = clean
@@ -105,7 +127,7 @@ def append(name: str, row: dict) -> None:
     if _sheets_configured():
         _ws(name).append_row(["" if row.get(c) is None else str(row.get(c)) for c in cols],
                              value_input_option="RAW")
-        _sheet_rows.clear()
+        _sheet_rows.clear(name)
     else:
         data = _local()
         data.setdefault(name, []).append({c: "" if row.get(c) is None else str(row.get(c)) for c in cols})

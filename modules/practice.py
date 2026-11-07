@@ -9,6 +9,7 @@ session, and also adds the minutes to the running practice total).
 from __future__ import annotations
 
 import datetime as dt
+import hashlib
 import json
 
 from modules import practice_store as store
@@ -18,6 +19,8 @@ from modules.pathway_seed import SONG_STATUSES, STATUSES, seed_rows
 RUSTY_DAYS = 30          # comfortable/solid things untouched this long
 STALLED_DAYS = 21        # things you're working on but haven't touched in a while
 ACTIVE_STATUSES = {"Working on", "Learning", "Polishing"}
+DEFAULT_DONE = "Played through once on a take, mistakes allowed"
+_SHEETS_EPOCH = dt.datetime(1899, 12, 30)   # day zero of a Google Sheets date serial
 
 
 def _date(s: str) -> dt.date | None:
@@ -123,7 +126,10 @@ def active_session() -> dict | None:
 
 
 def start_session() -> None:
-    store.set_state("active_session", {"start": store.now().isoformat(), "items": []})
+    page = next_page() or {}
+    item = page.get("item_id")
+    store.set_state("active_session", {"start": store.now().isoformat(),
+                                       "items": [item] if item in catalog() else []})
 
 
 def set_active_items(item_ids: list[str]) -> None:
@@ -252,6 +258,12 @@ def save_session(start: dt.datetime, minutes: int, updates: dict[str, dict], not
     day = start.date().isoformat()
     end = start + dt.timedelta(minutes=minutes)
 
+    # pages finished in this session join your note, and their take stands in for a separate recording
+    finished = [p for p in store.read("pages") if p["session_id"] == sid]
+    if finished:
+        notes = "\n\n".join(x for x in [notes, "Finished: " + ", ".join(p["title"] for p in finished)] if x)
+    recording = recording or next((p["take"] for p in reversed(finished) if p["take"]), "")
+
     # 1. update the items themselves
     p_rows, s_rows = pathway(), songs()
     for rows, table in ((p_rows, "pathway"), (s_rows, "songs")):
@@ -321,6 +333,116 @@ def delete_session(session_id: str) -> None:
         delete_practice_log(s["start"][:10], int(float(s["minutes"] or 0)))
     except Exception:
         pass
+
+
+# ----------------------------------------------------------------------------- pages and ideas
+def next_page() -> dict | None:
+    """The page you plan to finish. It stays here until you finish or change it."""
+    return store.get_state("next_page")
+
+
+def set_next_page(title: str, done_when: str = "", idea_id: str = "", item_id: str = "") -> None:
+    store.set_state("next_page", {"title": title, "done_when": done_when.strip() or DEFAULT_DONE,
+                                  "idea_id": idea_id, "item_id": item_id})
+    s = active_session()
+    if s is not None and item_id and item_id in catalog() and item_id not in s["items"]:
+        set_active_items(s["items"] + [item_id])
+
+
+def clear_next_page() -> None:
+    store.set_state("next_page", None)
+
+
+def finished_pages() -> list[dict]:
+    return sorted(store.read("pages"), key=lambda p: p["finished"], reverse=True)
+
+
+def finish_page(page: dict, active: dict, take: str = "") -> dict:
+    """Put the page in the sketchbook. Returns its id and its number."""
+    now = store.now()
+    sid = dt.datetime.fromisoformat(active["start"]).strftime("%Y%m%d-%H%M%S")
+    page_id = now.strftime("%Y%m%d-%H%M%S")
+    store.append("pages", {"id": page_id, "finished": now.isoformat(),
+                           "title": page["title"], "done_when": page["done_when"], "take": take,
+                           "session_id": sid, "item_id": page.get("item_id", "")})
+    if page.get("idea_id"):
+        _set_idea_status(page["idea_id"], "Used")
+    clear_next_page()
+    return {"id": page_id, "number": len(store.read("pages"))}
+
+
+def set_page_take(page_id: str, take: str) -> None:
+    rows = store.read("pages")
+    for p in rows:
+        if p["id"] == page_id:
+            p["take"] = take
+    store.write_all("pages", rows)
+
+
+def delete_page(page_id: str) -> None:
+    store.write_all("pages", [p for p in store.read("pages") if p["id"] != page_id])
+
+
+def _serial_to_iso(value: str) -> str:
+    try:
+        return (_SHEETS_EPOCH + dt.timedelta(days=float(value))).replace(microsecond=0).isoformat()
+    except (ValueError, OverflowError):
+        return store.now().isoformat()
+
+
+def _import_form_ideas() -> None:
+    """Bring new Google Form answers into the ideas table. An answer's id comes from its contents, so
+    each is imported once, and one you drop stays dropped."""
+    try:
+        responses = store.form_responses()
+    except Exception:   # an optional extra: the page still works if that tab can't be read
+        return
+    seen = {r["id"] for r in store.read("ideas")}
+    for stamp, text in responses:
+        key = hashlib.sha1(f"{stamp}|{text}".encode()).hexdigest()[:12]
+        if key not in seen:
+            seen.add(key)
+            store.append("ideas", {"id": key, "text": text, "added": _serial_to_iso(stamp),
+                                   "status": "Inbox", "source": "form"})
+
+
+def ideas() -> list[dict]:
+    """Ideas waiting to be used, newest first."""
+    _import_form_ideas()
+    return sorted((r for r in store.read("ideas") if r["status"] == "Inbox"),
+                  key=lambda r: r["added"], reverse=True)
+
+
+def add_idea(text: str) -> None:
+    now = store.now()
+    store.append("ideas", {"id": now.strftime("%Y%m%d-%H%M%S"), "text": text, "added": now.isoformat(),
+                           "status": "Inbox", "source": "app"})
+
+
+def _set_idea_status(idea_id: str, status: str) -> None:
+    rows = store.read("ideas")
+    for r in rows:
+        if r["id"] == idea_id:
+            r["status"] = status
+    store.write_all("ideas", rows)
+
+
+def drop_idea(idea_id: str) -> None:
+    _set_idea_status(idea_id, "Dropped")
+
+
+def use_idea(idea: dict) -> None:
+    set_next_page(idea["text"], idea_id=idea["id"])
+
+
+def page_suggestions(limit: int = 6) -> list[dict]:
+    """Things to pick for a page: your ideas first, then what's in progress."""
+    out = [{"key": f"idea:{i['id']}", "title": i["text"], "idea_id": i["id"], "item_id": ""}
+           for i in ideas()[:4]]
+    for r in in_progress()[:max(0, limit - len(out))]:
+        title = f"{r['_label']}: {r['next_note']}" if r.get("next_note") else r["_label"]
+        out.append({"key": f"item:{r['id']}", "title": title, "idea_id": "", "item_id": r["id"]})
+    return out
 
 
 def sheet_url() -> str | None:
