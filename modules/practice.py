@@ -3,7 +3,7 @@ modules/practice.py
 
 Logic shared by the Practice and Pathway pages: loading the map and songs, the "ready to start"
 and "getting rusty" signals, and saving a session (updates every item you touched, appends the
-session, and also logs minutes to the existing Progress Dashboard).
+session, and also adds the minutes to the running practice total).
 """
 
 from __future__ import annotations
@@ -259,7 +259,7 @@ def save_session(start: dt.datetime, minutes: int, updates: dict[str, dict], not
                                        "status": u.get("status", ""), "note": u.get("note", ""),
                                        "bpm": u.get("bpm", "")})
 
-    # 3. keep the existing Progress Dashboard in the loop
+    # 3. add to the running total
     kinds = [cat[i]["kind"] for i in updates if i in cat]
     focus = max(set(kinds), key=kinds.count) if kinds else "Other"
     log_practice(int(minutes), f"Session: {focus}", date=day)
@@ -267,7 +267,7 @@ def save_session(start: dt.datetime, minutes: int, updates: dict[str, dict], not
 
 
 def delete_session(session_id: str) -> None:
-    """Undo a session: remove it, its item lines and its Progress Dashboard row, and set each item's
+    """Undo a session: remove it, its item lines and its practice total row, and set each item's
     'last practised' back to the latest remaining session that touched it. Statuses and notes you
     set stay as they are (they're easy to change on the Pathway page)."""
     from modules.database import delete_practice_log

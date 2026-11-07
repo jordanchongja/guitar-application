@@ -32,7 +32,7 @@ usable start to finish.
   locking: the start time is saved, elapsed time is computed from it. The page opens with *Last time*,
   what's in progress and what's getting rusty, so coming back after a break is easy.
 - **Floating Practice button:** the corner button on every other page shows what you're working on, and
-  starts, pauses and tags a session without leaving the page. Saving a session happens on Practice.
+  starts, pauses and tags a session and runs the metronome without leaving the page. Saving a session happens on Practice.
 - **Pathway:** a map of what's worth learning (fretboard, scales, chords, rhythm, technique, theory &
   ear, application) with a concrete "done when" goal and practice tip per item, *ready to start* and
   *rusty* hints, links into the app's tools, and your songs. Edit it freely in the app.
@@ -86,7 +86,7 @@ their own persistent tracking, rather than clicking around the shared one
 above.
 
 ```
-main.py                        # Home page + shared skeleton / global settings
+main.py                        # Entry point: builds the sidebar and runs the open page
 modules/
   theory.py                    # Notes, scales, chords, progressions, arpeggios, circle of fifths,
                                 #   chord identification, practice/daily-challenge generators
@@ -96,12 +96,15 @@ modules/
   database.py                  # Practice logs + quiz scores: Google Sheets when
                                 #   configured, local SQLite fallback otherwise
   settings.py                  # Shared sidebar controls (Left-Handed Mode, Tuning)
+  navigation.py                # Sidebar sections and the pages in each
+  metronome.py                 # Browser metronome for the Practice page and floating panel
 pages/
-  1_Scale_Reference.py         # key/scale/CAGED-position/3-notes-per-string browser
+  Home.py                      # This month so far + links to everything
+  1_Scale_Reference.py         # scales by CAGED shape or 3-notes-per-string, as notes or intervals
   2_Fretboard_Tester.py        # note-finding quiz
   3_Chord_Progressions.py      # diatonic chords + progression generator
   4_Ear_Training.py            # interval ear training
-  5_Progress_Dashboard.py      # practice minutes + quiz score history
+  5_Quiz_Scores.py             # recent quiz scores
   6_Chord_Dictionary.py        # click frets, app names the chord
   7_Circle_of_Fifths.py        # interactive circle of fifths
   8_Arpeggio_Visualizer.py     # arpeggio + extended chord shapes on the neck

@@ -284,6 +284,50 @@ def get_position_windows(root: str, tuning: list[str]) -> list[tuple[int, int]]:
 
 
 # ---------------------------------------------------------------------------
+# CAGED scale shapes
+# ---------------------------------------------------------------------------
+#
+# The five major-scale boxes, written out in C for standard tuning: frets per string, low E first.
+# Other keys slide these up the neck. Pentatonics and minor scales are the same boxes with some
+# notes dropped: a minor scale uses the boxes of its relative major (A minor uses C major's).
+
+CAGED_SHAPES = {
+    "C": [(0, 1, 3), (0, 2, 3), (0, 2, 3), (0, 2), (0, 1, 3), (0, 1, 3)],
+    "A": [(3, 5), (2, 3, 5), (2, 3, 5), (2, 4, 5), (3, 5, 6), (3, 5)],
+    "G": [(5, 7, 8), (5, 7, 8), (5, 7), (4, 5, 7), (5, 6, 8), (5, 7, 8)],
+    "E": [(7, 8, 10), (7, 8, 10), (7, 9, 10), (7, 9, 10), (8, 10), (7, 8, 10)],
+    "D": [(10, 12, 13), (10, 12), (9, 10, 12), (9, 10, 12), (10, 12, 13), (10, 12, 13)],
+}
+
+# Minor pentatonic boxes are numbered from the shape that starts on the root.
+MINOR_PENTATONIC_BOXES = ["G", "E", "D", "C", "A"]
+
+INTERVAL_LABELS = ["1", "b2", "2", "b3", "3", "4", "b5", "5", "b6", "6", "b7", "7"]
+
+
+def interval_label(root: str, note: str) -> str:
+    return INTERVAL_LABELS[(note_index(note) - note_index(root)) % 12]
+
+
+def get_caged_shape(key: str, scale_type: str, shape: str) -> dict[tuple[int, int], str]:
+    """{(string_number, fret): note} for one CAGED box, placed as low on the neck as it fits."""
+    parent = transpose(key, 3) if "Minor" in scale_type else key
+    shift = note_index(parent)
+    frets_by_string = CAGED_SHAPES[shape]
+    if min(min(frets) for frets in frets_by_string) + shift >= 12:
+        shift -= 12
+    scale_notes = get_scale_notes(key, scale_type)
+    tuning = TUNING_PRESETS[DEFAULT_TUNING_NAME]
+    found = {}
+    for i, frets in enumerate(frets_by_string):
+        for fret in frets:
+            note = note_at_fret(tuning[i], fret + shift)
+            if note in scale_notes:
+                found[(len(tuning) - i, fret + shift)] = note
+    return found
+
+
+# ---------------------------------------------------------------------------
 # Three-Notes-Per-String scale shapes
 # ---------------------------------------------------------------------------
 #

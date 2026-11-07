@@ -40,6 +40,6 @@ if routine:
     st.divider()
     if st.button("💾 Log this routine as today's practice"):
         log_practice(sum(i["minutes"] for i in routine), "Mixed (Practice Generator)")
-        st.success("Logged to your Progress Dashboard!")
+        st.success("Added to your all-time practice total!")
 else:
     st.info("Choose a duration and focus areas, then click **Generate Routine**.")

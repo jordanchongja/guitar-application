@@ -34,6 +34,7 @@ def draw_fretboard(
     left_handed: bool = False,
     show_note_names: bool = True,
     title: str | None = None,
+    view: tuple[int, int] | None = None,
 ) -> go.Figure:
     """
     Render a standard guitar neck.
@@ -51,9 +52,11 @@ def draw_fretboard(
     show_note_names : if False, highlighted markers show no text (used for quiz
                        questions where the note should stay hidden).
     title : optional chart title.
+    view : (lowest fret, highest fret) to zoom in on, for a compact shape diagram.
     """
     highlights = highlights or {}
     num_strings = len(tuning)
+    left_edge = view[0] - 1 if view and view[0] > 0 else 0
 
     fig = go.Figure()
 
@@ -125,7 +128,7 @@ def draw_fretboard(
         )
         # Open-string label on the left
         fig.add_annotation(
-            x=-0.35,
+            x=left_edge - (0.1 if left_edge else 0.35),
             y=y,
             text=f"<b>{open_note}</b>",
             showarrow=False,
@@ -134,7 +137,7 @@ def draw_fretboard(
         )
 
     # --- Fret number labels along the bottom --------------------------
-    for fret in range(0, num_frets + 1):
+    for fret in range(view[0] if view else 0, num_frets + 1):
         x = fret if fret == 0 else fret - 0.5
         fig.add_annotation(
             x=x,
@@ -175,14 +178,15 @@ def draw_fretboard(
         )
 
     # --- Layout -----------------------------------------------------------
+    x_range = [left_edge - (0.7 if left_edge else 1.2), (view[1] if view else num_frets) + 0.5]
     fig.update_xaxes(
-        range=[num_frets + 0.5, -1.2] if left_handed else [-1.2, num_frets + 0.5],
+        range=x_range[::-1] if left_handed else x_range,
         showgrid=False,
         zeroline=False,
         visible=False,
     )
     fig.update_yaxes(
-        range=[0, num_strings + 1],
+        range=[0, num_strings + (0.6 if view else 1)],
         showgrid=False,
         zeroline=False,
         visible=False,
@@ -193,8 +197,8 @@ def draw_fretboard(
         # on the frontend, which prints literally as "undefined" -- so we
         # always pass a string, empty when there's no title to show.
         title=title or "",
-        height=90 + num_strings * 45,
-        margin=dict(l=10, r=10, t=40 if title else 20, b=10),
+        height=70 + num_strings * 35 if view else 90 + num_strings * 45,
+        margin=dict(l=10, r=10, t=0 if view else 40 if title else 20, b=10),
         plot_bgcolor="white",
         paper_bgcolor="white",
     )

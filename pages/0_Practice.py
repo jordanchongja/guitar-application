@@ -12,6 +12,8 @@ import streamlit as st
 
 from modules import practice as P
 from modules import practice_store as store
+from modules.database import get_practice_last_n_days, get_practice_summary
+from modules.metronome import render_metronome
 from modules.pathway_seed import BRANCH_ICONS, SONG_STATUSES, STATUSES
 from modules.practice_panel import render_current_work
 from modules.settings import render_sidebar_settings
@@ -145,18 +147,10 @@ if active:
     with st.expander(":material/queue_music: What you're working on"):
         render_current_work()
 
-    # --- Metronome: loops while you play; its tempo pre-fills the bpm boxes when you end the session
+    # --- Metronome: its tempo pre-fills the bpm boxes when you end the session
     with st.expander(":material/timer_play: Metronome" + (f" · {active['bpm']} bpm" if active.get("bpm") else "")):
-        c1, c2 = st.columns([2, 1])
-        bpm_now = c1.number_input("Tempo (bpm)", 30, 260, int(active.get("bpm") or 80), step=2, key="metro_bpm",
-                                  on_change=lambda: P.set_active_field("bpm", int(st.session_state.metro_bpm)))
-        beats = c2.selectbox("Beats", [2, 3, 4, 6], index=2, key="metro_beats")
-        from modules.audio import generate_metronome_click_wav
-
-        bars = 4
-        st.audio(generate_metronome_click_wav(int(bpm_now), beats, bars * beats * 60 / bpm_now + 1e-6),
-                 format="audio/wav", loop=True)
-        st.caption("Press play: it loops until you stop it. Accented click on beat 1.")
+        render_metronome("practice_metronome", active.get("bpm"))
+        st.caption("Keeps clicking when you change page. Accented click on beat 1.")
 
     for i in chosen:
         row = cat[i]["row"]
@@ -248,6 +242,9 @@ if st.button("Start practising", type="primary", icon=":material/play_arrow:", w
     P.start_session()
     st.rerun()
 
+with st.expander(":material/timer_play: Metronome"):
+    render_metronome("practice_metronome")
+
 sess = P.sessions()
 items = P.session_items()
 
@@ -282,7 +279,7 @@ if rust:
 
 # --- balance + numbers
 if sess:
-    st.subheader("Last 30 days")
+    st.subheader("Your numbers")
     days = [s["start"][:10] for s in sess]
     month_cut = (store.now().date() - dt.timedelta(days=30)).isoformat()
     week_cut = (store.now().date() - dt.timedelta(days=7)).isoformat()
@@ -291,11 +288,15 @@ if sess:
                   border=True)
         st.metric("30 days", fmt_minutes(sum(float(s["minutes"] or 0) for s in sess if s["start"][:10] >= month_cut)),
                   border=True)
+        st.metric("All time", fmt_minutes(get_practice_summary()["total_minutes"]), border=True)
         st.metric("Streak", f"{P.streak(days)} day" + ("" if P.streak(days) == 1 else "s"), border=True)
+    st.markdown("**Minutes, last 7 days**")
+    st.bar_chart(get_practice_last_n_days(7, store.now().date())["minutes"], height=200, x_label="", y_label="")
     split = P.minutes_by_kind(30)
     if split:
         import pandas as pd
         df = pd.DataFrame({"Area": list(split), "Minutes": list(split.values())}).sort_values("Minutes")
+        st.markdown("**Minutes by area, last 30 days**")
         st.bar_chart(df, x="Area", y="Minutes", horizontal=True, height=220)
         untouched = [b for b in BRANCH_ICONS if b not in split]
         if untouched:
@@ -317,7 +318,7 @@ with st.expander("Forgot to start the timer? Log a past session"):
 with st.expander(":material/edit_note: Manage past sessions"):
     if not sess:
         st.caption("No sessions yet.")
-    st.caption("Deleting a session removes it everywhere (log, Progress Dashboard) and resets each item's "
+    st.caption("Deleting a session removes it everywhere (log and totals) and resets each item's "
                "'last practised' date. Recordings stay in your Drive folder.")
     for s in sess[:15]:
         names = [r["item"] for r in items if r["session_id"] == s["id"]]

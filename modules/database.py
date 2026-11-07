@@ -1,7 +1,7 @@
 """
 modules/database.py
 
-Persistence layer for the Progress Dashboard: practice-session logs and quiz
+Persistence layer for practice totals and quiz scores: practice-session logs and quiz
 scores. Two backends share the same public API below (log_practice,
 log_quiz_score, get_practice_last_n_days, get_recent_quiz_scores,
 get_practice_summary) so no page needs to know or care which one is active:
@@ -223,9 +223,10 @@ def _quiz_rows() -> list[dict]:
     return _sheets_quiz_rows() if _sheets_configured() else _sqlite_quiz_rows()
 
 
-def get_practice_last_n_days(n: int = 7) -> pd.DataFrame:
+def get_practice_last_n_days(n: int = 7, today: dt.date | None = None) -> pd.DataFrame:
     rows = _practice_rows()
-    start_date = (dt.date.today() - dt.timedelta(days=n - 1)).isoformat()
+    today = today or dt.date.today()
+    start_date = (today - dt.timedelta(days=n - 1)).isoformat()
 
     df = pd.DataFrame(rows, columns=PRACTICE_HEADERS)
     if not df.empty:
@@ -236,7 +237,7 @@ def get_practice_last_n_days(n: int = 7) -> pd.DataFrame:
     else:
         df = pd.DataFrame(columns=["date", "minutes"])
 
-    all_days = pd.date_range(end=dt.date.today(), periods=n).date.astype(str)
+    all_days = pd.date_range(end=today, periods=n).date.astype(str)
     full = pd.DataFrame({"date": all_days}).merge(df, on="date", how="left").fillna(0)
     full["minutes"] = full["minutes"].astype(int)
     full = full.set_index("date")

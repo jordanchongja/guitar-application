@@ -148,6 +148,6 @@ with save_col1:
         st.session_state.fet_score = 0
         st.session_state.fet_total = 0
         new_question()
-        st.success("Score saved to your Progress Dashboard!")
+        st.success("Score saved to Quiz Scores!")
 with save_col2:
     st.caption("Saves your current score to the database and starts a fresh session.")

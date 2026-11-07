@@ -2,8 +2,8 @@
 modules/practice_panel.py
 
 The floating Practice button shown in the corner of every page except Practice itself. It keeps
-your current work one tap away (songs and skills in progress, wishlist) and lets you start, pause
-and jot notes on a session without leaving the page you're on. Ending a session, recordings and
+your current work one tap away (songs and skills in progress, wishlist) and lets you start, pause,
+jot notes on a session and run the metronome without leaving the page you're on. Ending a session, recordings and
 history stay on the Practice page.
 """
 
@@ -13,14 +13,16 @@ import streamlit as st
 
 from modules import practice as P
 from modules import practice_store as store
+from modules.metronome import render_metronome
 
 _CSS = """
 <style>
-.st-key-practice_fab { position: fixed; right: 1.25rem; bottom: 1.25rem; width: auto; z-index: 999990; }
+/* bottom: sits above Streamlit Cloud's "Manage app" button, which takes that corner */
+.st-key-practice_fab { position: fixed; right: 1.25rem; bottom: 4.5rem; width: auto; z-index: 999990; }
 .st-key-practice_fab button { border-radius: 999px; box-shadow: 0 4px 14px rgba(0, 0, 0, .3); }
 [data-testid="stPopoverBody"]:has(.st-key-practice_panel) {
     width: min(23rem, calc(100vw - 2rem));
-    max-height: min(36rem, calc(100vh - 6rem));
+    max-height: min(36rem, calc(100vh - 9rem));
     overflow-y: auto;
 }
 </style>
@@ -126,6 +128,8 @@ def _floating_button() -> None:
         else:
             st.button("Start practising", type="primary", icon=":material/play_arrow:", width="stretch",
                       on_click=P.start_session)
+        st.markdown("**Metronome**")
+        render_metronome("panel_metronome", active.get("bpm") if active else None)
         render_current_work(active)
         with st.container(horizontal=True):
             st.page_link("pages/0_Practice.py", label="End session" if active else "Practice page",
