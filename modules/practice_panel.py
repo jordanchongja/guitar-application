@@ -66,16 +66,17 @@ def render_current_work(active: dict | None = None) -> None:
     for title, rows in groups:
         if not rows:
             continue
-        st.markdown(f"**{title}**")
+        st.markdown(f":small[:gray[**{title.upper()}**]]")
         for r in rows:
-            if active:
-                st.checkbox(r["_label"], value=r["id"] in tagged, key=f"panel_tag_{ver}_{r['id']}",
-                            on_change=_toggle_tag, args=(r["id"],))
-            else:
-                st.markdown(r["_label"])
-            sub = _details(r)
-            if sub:
-                st.caption(sub)
+            with st.container(gap=None):     # keeps the details tight under their own title
+                if active:
+                    st.checkbox(f"**{r['_label']}**", value=r["id"] in tagged, key=f"panel_tag_{ver}_{r['id']}",
+                                on_change=_toggle_tag, args=(r["id"],))
+                else:
+                    st.markdown(f"**{r['_label']}**")
+                sub = _details(r)
+                if sub:
+                    st.caption(sub)
     if not (work or wish):
         st.caption("Nothing in progress yet. Pick something from the Pathway page.")
     other = len(set(tagged) - {r["id"] for r in work + wish})
