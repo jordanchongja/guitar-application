@@ -13,7 +13,19 @@ import tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-TABLES = ["pathway", "songs", "sessions", "session_items"]
+sys.path.insert(0, str(ROOT))
+
+from modules.chord_analysis import analyse, parse_progression  # noqa: E402
+
+TABLES = ["pathway", "songs", "sessions", "session_items", "breakdowns"]
+
+
+def with_analysis(section: dict) -> dict:
+    """A breakdown section plus what the app shows for it, so the note reads the same."""
+    chords, _ = parse_progression(section["chords"])
+    result = analyse(chords, section["key"]) if chords else []
+    return section | {"numerals": " ".join(c["numeral"] for c in result),
+                      "why": {c["symbol"]: c["why"] for c in result if c["why"]}}
 
 
 def from_sheet(secrets: dict) -> dict:
@@ -43,14 +55,17 @@ def main() -> None:
         secrets = tomllib.loads(secrets_path.read_text(encoding="utf-8"))
         if "gcp_service_account" in secrets and "gsheet" in secrets:
             data = from_sheet(secrets)
+            data["breakdowns"] = [with_analysis(s) for s in data["breakdowns"]]
             data["practice_timezone"] = secrets.get("practice_timezone", "Asia/Singapore")
             sys.stdout.reconfigure(encoding="utf-8")
             print(json.dumps(data, ensure_ascii=False))
             return
     local = ROOT / "practice_data.json"
     data = json.loads(local.read_text(encoding="utf-8")) if local.exists() else {}
+    out = {t: data.get(t, []) for t in TABLES}
+    out["breakdowns"] = [with_analysis(s) for s in out["breakdowns"]]
     sys.stdout.reconfigure(encoding="utf-8")
-    print(json.dumps({t: data.get(t, []) for t in TABLES}, ensure_ascii=False))
+    print(json.dumps(out, ensure_ascii=False))
 
 
 if __name__ == "__main__":
